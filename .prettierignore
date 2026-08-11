@@ -5,3 +5,4 @@ pnpm-lock.yaml
 
 # 스펙 원본 — 포매터가 건드리지 않는다.
 기획서.md
+tests/golden/RULES.md

@@ -1,0 +1,59 @@
+{
+  "input": {
+    "transcript": "아침에 아메리카노 한 잔 마셨고, 오후에 또 졸려서 아메리카노 한 잔 더 마셨어.",
+    "recorded_at": "2026-08-11T16:30:00+09:00",
+    "dictionary": {}
+  },
+  "expected": {
+    "events": [
+      {
+        "category": "food",
+        "occurred_at": "2026-08-11T08:00:00+09:00",
+        "occurred_at_precision": "part_of_day",
+        "payload": {
+          "name": "아메리카노",
+          "name_raw": "아메리카노",
+          "kind": "drink",
+          "meal_type": null,
+          "amount_text": "한 잔",
+          "amount_value": 1,
+          "amount_unit": "잔",
+          "completion_ratio": null
+        },
+        "confidence": 0.8,
+        "needs_review": false
+      },
+      {
+        "category": "energy",
+        "occurred_at": "2026-08-11T15:00:00+09:00",
+        "occurred_at_precision": "part_of_day",
+        "payload": {
+          "level": 2,
+          "note": "오후에 또 졸림"
+        },
+        "confidence": 0.8,
+        "needs_review": false
+      },
+      {
+        "category": "food",
+        "occurred_at": "2026-08-11T15:00:00+09:00",
+        "occurred_at_precision": "part_of_day",
+        "payload": {
+          "name": "아메리카노",
+          "name_raw": "아메리카노",
+          "kind": "drink",
+          "meal_type": null,
+          "amount_text": "한 잔",
+          "amount_value": 1,
+          "amount_unit": "잔",
+          "completion_ratio": null
+        },
+        "confidence": 0.8,
+        "needs_review": false
+      }
+    ],
+    "hypotheses": [],
+    "unparsed": []
+  },
+  "_covers": ["같은 항목 중복 등장", "food", "energy"]
+}

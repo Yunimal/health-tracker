@@ -1,0 +1,92 @@
+{
+  "input": {
+    "transcript": "오늘 아침엔 토스트에 계란 하나 부쳐 먹었고, 어제 잠을 설쳐서 그런지 오전 내내 좀 처졌어. 그래도 기분은 그럭저럭 괜찮아.",
+    "recorded_at": "2026-08-11T11:10:00+09:00",
+    "dictionary": {}
+  },
+  "expected": {
+    "events": [
+      {
+        "category": "food",
+        "occurred_at": "2026-08-11T08:00:00+09:00",
+        "occurred_at_precision": "part_of_day",
+        "payload": {
+          "name": "토스트",
+          "name_raw": "토스트",
+          "kind": "food",
+          "meal_type": "breakfast",
+          "amount_text": null,
+          "amount_value": null,
+          "amount_unit": null,
+          "completion_ratio": null
+        },
+        "confidence": 0.5,
+        "needs_review": true
+      },
+      {
+        "category": "food",
+        "occurred_at": "2026-08-11T08:00:00+09:00",
+        "occurred_at_precision": "part_of_day",
+        "payload": {
+          "name": "계란",
+          "name_raw": "계란",
+          "kind": "food",
+          "meal_type": "breakfast",
+          "amount_text": "하나",
+          "amount_value": 1,
+          "amount_unit": "개",
+          "completion_ratio": null
+        },
+        "confidence": 0.8,
+        "needs_review": false
+      },
+      {
+        "category": "sleep",
+        "occurred_at": "2026-08-10T23:00:00+09:00",
+        "occurred_at_precision": "part_of_day",
+        "payload": {
+          "bedtime": null,
+          "wake_time": null,
+          "quality": 2,
+          "interruptions": null,
+          "note": "어제 잠을 설침"
+        },
+        "confidence": 0.8,
+        "needs_review": false
+      },
+      {
+        "category": "energy",
+        "occurred_at": "2026-08-11T09:00:00+09:00",
+        "occurred_at_precision": "part_of_day",
+        "payload": {
+          "level": 2,
+          "note": "오전 내내 좀 처짐"
+        },
+        "confidence": 0.8,
+        "needs_review": false
+      },
+      {
+        "category": "mood",
+        "occurred_at": "2026-08-11T11:10:00+09:00",
+        "occurred_at_precision": "hour",
+        "payload": {
+          "label": "괜찮음",
+          "valence": 1,
+          "arousal": 1,
+          "note": "그럭저럭 괜찮아"
+        },
+        "confidence": 0.8,
+        "needs_review": false
+      }
+    ],
+    "hypotheses": [
+      {
+        "statement": "어제 잠을 설쳐서 그런지 오전 내내 좀 처졌어",
+        "cause_hint": "수면 부족",
+        "effect_hint": "처짐"
+      }
+    ],
+    "unparsed": []
+  },
+  "_covers": ["4개 카테고리 혼재", "food", "sleep", "energy", "mood"]
+}

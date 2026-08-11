@@ -1,0 +1,31 @@
+{
+  "input": {
+    "transcript": "오늘 점심은 바빠서 그냥 건너뛰었어. 배는 좀 고픈데 먹을 시간이 없네.",
+    "recorded_at": "2026-08-11T13:20:00+09:00",
+    "dictionary": {}
+  },
+  "expected": {
+    "events": [
+      {
+        "category": "food",
+        "occurred_at": "2026-08-11T12:30:00+09:00",
+        "occurred_at_precision": "part_of_day",
+        "payload": {
+          "name": null,
+          "name_raw": null,
+          "kind": "skipped_meal",
+          "meal_type": "lunch",
+          "amount_text": null,
+          "amount_value": null,
+          "amount_unit": null,
+          "completion_ratio": null
+        },
+        "confidence": 0.8,
+        "needs_review": false
+      }
+    ],
+    "hypotheses": [],
+    "unparsed": ["배는 좀 고픈데"]
+  },
+  "_covers": ["결식", "food", "배고픔 상태(애매)"]
+}

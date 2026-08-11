@@ -1,0 +1,28 @@
+{
+  "input": {
+    "transcript": "어젯밤엔 12시 좀 넘어서 누웠는데 새벽에 두어 번 깼어. 아침 6시 반에 일어났고 푹 잔 느낌은 아니야.",
+    "recorded_at": "2026-08-11T08:15:00+09:00",
+    "dictionary": {}
+  },
+  "expected": {
+    "events": [
+      {
+        "category": "sleep",
+        "occurred_at": "2026-08-11T00:00:00+09:00",
+        "occurred_at_precision": "hour",
+        "payload": {
+          "bedtime": "2026-08-11T00:00:00+09:00",
+          "wake_time": "2026-08-11T06:30:00+09:00",
+          "quality": 2,
+          "interruptions": 2,
+          "note": "12시 좀 넘어 누웠고 새벽에 두어 번 깼고 푹 잔 느낌은 아님"
+        },
+        "confidence": 0.6,
+        "needs_review": true
+      }
+    ],
+    "hypotheses": [],
+    "unparsed": []
+  },
+  "_covers": ["수면 상세(취침/각성/기상/질)", "sleep", "과거 시간 표현"]
+}

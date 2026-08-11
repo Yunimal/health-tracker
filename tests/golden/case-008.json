@@ -1,0 +1,13 @@
+{
+  "input": {
+    "transcript": "오늘 회의가 세 개나 있네. 아 맞다 이따 택배도 찾아와야 하는데.",
+    "recorded_at": "2026-08-11T09:45:00+09:00",
+    "dictionary": {}
+  },
+  "expected": {
+    "events": [],
+    "hypotheses": [],
+    "unparsed": []
+  },
+  "_covers": ["파싱할 게 없는 잡담", "unparsed 후보"]
+}

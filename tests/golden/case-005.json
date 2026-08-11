@@ -1,0 +1,37 @@
+{
+  "input": {
+    "transcript": "지난 주말에 등산 갔다 와서 월요일까지 다리가 뻐근했어. 토요일 저녁엔 치킨도 시켜 먹었고.",
+    "recorded_at": "2026-08-11T10:00:00+09:00",
+    "dictionary": {}
+  },
+  "expected": {
+    "events": [
+      {
+        "category": "food",
+        "occurred_at": "2026-08-08T19:00:00+09:00",
+        "occurred_at_precision": "part_of_day",
+        "payload": {
+          "name": "치킨",
+          "name_raw": "치킨",
+          "kind": "food",
+          "meal_type": "dinner",
+          "amount_text": null,
+          "amount_value": null,
+          "amount_unit": null,
+          "completion_ratio": null
+        },
+        "confidence": 0.5,
+        "needs_review": true
+      }
+    ],
+    "hypotheses": [
+      {
+        "statement": "지난 주말에 등산 갔다 와서 월요일까지 다리가 뻐근했어",
+        "cause_hint": "등산",
+        "effect_hint": "다리 뻐근함"
+      }
+    ],
+    "unparsed": ["지난 주말에 등산 갔다 옴", "월요일까지 다리가 뻐근했어"]
+  },
+  "_covers": ["과거 시간 표현", "food", "energy"]
+}

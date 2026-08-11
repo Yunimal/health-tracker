@@ -1,0 +1,51 @@
+{
+  "input": {
+    "transcript": "어제 오후 늦게 커피를 마셔서 그런지 밤에 잠이 잘 안 오더라고. 카페인 때문인가 싶어.",
+    "recorded_at": "2026-08-11T09:00:00+09:00",
+    "dictionary": {}
+  },
+  "expected": {
+    "events": [
+      {
+        "category": "food",
+        "occurred_at": "2026-08-10T15:00:00+09:00",
+        "occurred_at_precision": "part_of_day",
+        "payload": {
+          "name": "커피",
+          "name_raw": "커피",
+          "kind": "drink",
+          "meal_type": null,
+          "amount_text": null,
+          "amount_value": null,
+          "amount_unit": null,
+          "completion_ratio": null
+        },
+        "confidence": 0.5,
+        "needs_review": true
+      },
+      {
+        "category": "sleep",
+        "occurred_at": "2026-08-10T23:00:00+09:00",
+        "occurred_at_precision": "part_of_day",
+        "payload": {
+          "bedtime": null,
+          "wake_time": null,
+          "quality": 2,
+          "interruptions": null,
+          "note": "밤에 잠이 잘 안 옴"
+        },
+        "confidence": 0.8,
+        "needs_review": false
+      }
+    ],
+    "hypotheses": [
+      {
+        "statement": "어제 오후 늦게 커피를 마셔서 그런지 밤에 잠이 잘 안 오더라고. 카페인 때문인가 싶어.",
+        "cause_hint": "오후 커피 섭취",
+        "effect_hint": "입면 곤란"
+      }
+    ],
+    "unparsed": []
+  },
+  "_covers": ["사실+추측 혼재", "food", "sleep", "hypothesis", "과거 시간 표현"]
+}

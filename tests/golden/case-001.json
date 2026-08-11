@@ -5,9 +5,117 @@
     "dictionary": {}
   },
   "expected": {
-    "events": [],
-    "hypotheses": [],
-    "unparsed": []
+    "events": [
+      {
+        "category": "food",
+        "occurred_at": "2026-08-10T09:00:00+09:00",
+        "occurred_at_precision": "exact",
+        "payload": {
+          "name": "서리태 콩물",
+          "name_raw": "서리태 콩물",
+          "kind": "drink",
+          "meal_type": null,
+          "amount_text": "세 모금",
+          "amount_value": null,
+          "amount_unit": null,
+          "completion_ratio": null
+        },
+        "confidence": 0.7,
+        "needs_review": false
+      },
+      {
+        "category": "food",
+        "occurred_at": "2026-08-10T08:00:00+09:00",
+        "occurred_at_precision": "part_of_day",
+        "payload": {
+          "name": null,
+          "name_raw": null,
+          "kind": "skipped_meal",
+          "meal_type": "breakfast",
+          "amount_text": null,
+          "amount_value": null,
+          "amount_unit": null,
+          "completion_ratio": null
+        },
+        "confidence": 0.8,
+        "needs_review": false
+      },
+      {
+        "category": "sleep",
+        "occurred_at": "2026-08-09T23:00:00+09:00",
+        "occurred_at_precision": "part_of_day",
+        "payload": {
+          "bedtime": null,
+          "wake_time": null,
+          "quality": 2,
+          "interruptions": null,
+          "note": "어제 밤잠을 좀 설침"
+        },
+        "confidence": 0.8,
+        "needs_review": false
+      },
+      {
+        "category": "energy",
+        "occurred_at": "2026-08-10T09:00:00+09:00",
+        "occurred_at_precision": "hour",
+        "payload": {
+          "level": 2,
+          "note": "너무 졸림"
+        },
+        "confidence": 0.8,
+        "needs_review": false
+      },
+      {
+        "category": "food",
+        "occurred_at": "2026-08-10T09:00:00+09:00",
+        "occurred_at_precision": "hour",
+        "payload": {
+          "name": "커피",
+          "name_raw": "커피",
+          "kind": "drink",
+          "meal_type": null,
+          "amount_text": "한 모금",
+          "amount_value": null,
+          "amount_unit": null,
+          "completion_ratio": null
+        },
+        "confidence": 0.5,
+        "needs_review": true
+      },
+      {
+        "category": "food",
+        "occurred_at": "2026-08-10T09:00:00+09:00",
+        "occurred_at_precision": "hour",
+        "payload": {
+          "name": "쿠크다스",
+          "name_raw": "쿠크다스",
+          "kind": "food",
+          "meal_type": "snack",
+          "amount_text": "두 개",
+          "amount_value": 2,
+          "amount_unit": "개",
+          "completion_ratio": null
+        },
+        "confidence": 0.8,
+        "needs_review": false
+      }
+    ],
+    "hypotheses": [
+      {
+        "statement": "멜라토닌 안 먹어서 그런가?",
+        "cause_hint": "멜라토닌 미복용",
+        "effect_hint": "수면 질 저하"
+      }
+    ],
+    "unparsed": ["배가 고파", "멜라토닌 안 먹음"]
   },
-  "_note": "TODO(STEP 3): 기획서 §2 표를 기준으로 expected 를 채운다. 지금은 골든 러너의 형식 앵커 역할만 한다."
+  "_covers": [
+    "사실+추측 혼재",
+    "결식",
+    "모호한 양 표현",
+    "food",
+    "sleep",
+    "energy",
+    "기획서 §2 앵커"
+  ]
 }

@@ -1,0 +1,65 @@
+{
+  "input": {
+    "transcript": "아까 물 좀 마시고 빵도 조금 뜯어 먹었어. 아몬드도 몇 알 집어 먹었네.",
+    "recorded_at": "2026-08-11T15:00:00+09:00",
+    "dictionary": {}
+  },
+  "expected": {
+    "events": [
+      {
+        "category": "food",
+        "occurred_at": "2026-08-11T14:00:00+09:00",
+        "occurred_at_precision": "hour",
+        "payload": {
+          "name": "물",
+          "name_raw": "물",
+          "kind": "drink",
+          "meal_type": null,
+          "amount_text": "좀",
+          "amount_value": null,
+          "amount_unit": null,
+          "completion_ratio": null
+        },
+        "confidence": 0.5,
+        "needs_review": true
+      },
+      {
+        "category": "food",
+        "occurred_at": "2026-08-11T14:00:00+09:00",
+        "occurred_at_precision": "hour",
+        "payload": {
+          "name": "빵",
+          "name_raw": "빵",
+          "kind": "food",
+          "meal_type": null,
+          "amount_text": "조금",
+          "amount_value": null,
+          "amount_unit": null,
+          "completion_ratio": null
+        },
+        "confidence": 0.5,
+        "needs_review": true
+      },
+      {
+        "category": "food",
+        "occurred_at": "2026-08-11T14:00:00+09:00",
+        "occurred_at_precision": "hour",
+        "payload": {
+          "name": "아몬드",
+          "name_raw": "아몬드",
+          "kind": "food",
+          "meal_type": null,
+          "amount_text": "몇 알",
+          "amount_value": null,
+          "amount_unit": null,
+          "completion_ratio": null
+        },
+        "confidence": 0.5,
+        "needs_review": true
+      }
+    ],
+    "hypotheses": [],
+    "unparsed": []
+  },
+  "_covers": ["모호한 양 표현", "food"]
+}

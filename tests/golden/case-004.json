@@ -1,0 +1,48 @@
+{
+  "input": {
+    "transcript": "점심에 잔치국수 한 그릇 다 비웠는데 그 뒤로 계속 나른하고 눈이 감기네. 탄수화물을 많이 먹어서 그런가?",
+    "recorded_at": "2026-08-11T14:30:00+09:00",
+    "dictionary": {}
+  },
+  "expected": {
+    "events": [
+      {
+        "category": "food",
+        "occurred_at": "2026-08-11T12:30:00+09:00",
+        "occurred_at_precision": "part_of_day",
+        "payload": {
+          "name": "잔치국수",
+          "name_raw": "잔치국수",
+          "kind": "food",
+          "meal_type": "lunch",
+          "amount_text": "한 그릇",
+          "amount_value": 1,
+          "amount_unit": "그릇",
+          "completion_ratio": 1.0
+        },
+        "confidence": 0.8,
+        "needs_review": false
+      },
+      {
+        "category": "energy",
+        "occurred_at": "2026-08-11T14:30:00+09:00",
+        "occurred_at_precision": "hour",
+        "payload": {
+          "level": 2,
+          "note": "계속 나른하고 눈이 감김"
+        },
+        "confidence": 0.8,
+        "needs_review": false
+      }
+    ],
+    "hypotheses": [
+      {
+        "statement": "탄수화물을 많이 먹어서 그런가?",
+        "cause_hint": "탄수화물 과다 섭취",
+        "effect_hint": "나른함"
+      }
+    ],
+    "unparsed": []
+  },
+  "_covers": ["사실+추측 혼재", "food", "energy", "hypothesis"]
+}
