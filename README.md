@@ -33,12 +33,15 @@ pnpm install
 cp .env.example .env.local
 ```
 
-| 변수                        | 설명                                                  |
-| --------------------------- | ----------------------------------------------------- |
-| `SUPABASE_URL`              | Supabase 프로젝트 URL                                 |
-| `SUPABASE_SERVICE_ROLE_KEY` | 서버 전용 service role key (RLS 우회, 절대 노출 금지) |
-| `ANTHROPIC_API_KEY`         | Claude API 키                                         |
-| `USER_ID`                   | Phase 0 단일 사용자 UUID (인증 없음)                  |
+| 변수                        | 설명                                                        |
+| --------------------------- | ----------------------------------------------------------- |
+| `SUPABASE_URL`              | Supabase 프로젝트 URL                                       |
+| `SUPABASE_SERVICE_ROLE_KEY` | 서버 전용 service role key (RLS 우회, 절대 노출 금지)       |
+| `ANTHROPIC_API_KEY`         | Claude API 키                                               |
+| `USER_ID`                   | Phase 0 단일 사용자 UUID (인증 없음)                        |
+| `INGEST_TOKEN`              | `/api/entries` 수신 인증 토큰 (iOS 단축어가 Bearer 로 전송) |
+
+iOS 단축어(음성 입력) 연동은 [`docs/shortcut-setup.md`](./docs/shortcut-setup.md) 참고.
 
 ### 4. DB 마이그레이션
 

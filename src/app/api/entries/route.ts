@@ -1,15 +1,36 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { z } from "zod";
 import { getSupabaseClient } from "@/lib/db/client";
 import { env } from "@/lib/env";
-import type { RawEntryInsert } from "@/lib/db/schema";
+import { reparseEntry } from "@/lib/parser/persist";
+import type { RawEntry, RawEntryInsert } from "@/lib/db/schema";
 
 /**
- * /api/entries — 원문 수신/조회 엔드포인트.
+ * /api/entries — 원문 수신/조회 엔드포인트. (기획서 §7)
  *
+ * 인증: Authorization: Bearer {INGEST_TOKEN}. 없거나 틀리면 401. (POST/GET 공통)
  * 원칙: transcript(원문)는 저장 후 절대 UPDATE/DELETE 하지 않는다. (기획서 §5.1)
- * 파싱은 여기서 하지 않는다. (별도 트리거)
  */
+
+// ── 인증 ─────────────────────────────────────────────────────────────────────
+/** 길이 노출을 제외하고 타이밍에 무관한 문자열 비교. */
+function safeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let mismatch = 0;
+  for (let i = 0; i < a.length; i++) mismatch |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return mismatch === 0;
+}
+
+/** Bearer 토큰이 INGEST_TOKEN 과 일치하지 않으면 401 응답을, 통과면 null 을 반환한다. */
+function requireIngestToken(request: Request): NextResponse | null {
+  const header = request.headers.get("authorization") ?? "";
+  const match = header.match(/^Bearer\s+(.+)$/i);
+  const token = match?.[1];
+  if (!token || !safeEqual(token, env.ingestToken())) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+  return null;
+}
 
 // ── POST: 원문 수신 ─────────────────────────────────────────────────────────
 const PostBody = z.object({
@@ -28,6 +49,9 @@ function kstNowIso(): string {
 }
 
 export async function POST(request: Request): Promise<NextResponse> {
+  const authError = requireIngestToken(request);
+  if (authError) return authError;
+
   let raw: unknown;
   try {
     raw = await request.json();
@@ -57,6 +81,23 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json({ error: "insert_failed", detail: error.message }, { status: 500 });
   }
 
+  // 원문 저장에 성공했으면 파싱을 백그라운드로 트리거하고 즉시 201 을 반환한다.
+  // 단축어가 빨리 끝나야 하므로 파싱을 기다리지 않는다. 파싱이 실패해도 원문은 이미
+  // 저장됐으므로 201 은 유지된다(재파싱은 나중에 /api/parse 로 가능). (기획서 §7)
+  const entry = data as RawEntry;
+  try {
+    after(async () => {
+      try {
+        await reparseEntry(getSupabaseClient(), env.userId(), entry);
+      } catch (err) {
+        console.error(`[entries] 백그라운드 파싱 실패 (raw_entry ${entry.id}):`, err);
+      }
+    });
+  } catch (err) {
+    // after() 가 요청 스코프 밖(예: 단위 테스트)에서 호출되면 스케줄만 건너뛴다.
+    console.warn("[entries] after() 스케줄 생략:", err);
+  }
+
   return NextResponse.json({ entry: data }, { status: 201 });
 }
 
@@ -66,6 +107,9 @@ const DateQuery = z.object({
 });
 
 export async function GET(request: Request): Promise<NextResponse> {
+  const authError = requireIngestToken(request);
+  if (authError) return authError;
+
   const url = new URL(request.url);
   const parsed = DateQuery.safeParse({ date: url.searchParams.get("date") });
   if (!parsed.success) {

@@ -19,6 +19,19 @@
 5. **프롬프트 수정 시 반드시 골든 테스트를 돌린다.** (`pnpm test:golden`) 프롬프트는
    `src/lib/parser/prompts/vN.md` 로 버전을 올리고, 사용한 버전을
    `raw_entries.parse_version` 에 기록한다.
+   - **프롬프트의 실제 원본은 `src/lib/parser/prompts/v1.ts`(`PROMPT_V1`)다.**
+     파서는 이 문자열 상수를 사용한다(번들 안전 — fs 접근 없음). **`v1.md` 는 사람이
+     읽는 참조용 사본이며, 이를 고쳐도 동작에 반영되지 않는다.**
+   - **프롬프트 파일을 고치지 말고 새 버전 파일을 만든다.** `v1.ts` 를 직접 수정하지
+     않는다 — `v2.ts` 를 새로 만들어 `src/lib/parser/index.ts` 의 `PROMPTS` 레지스트리에
+     등록하고 `PARSE_VERSION` 을 `"v2"` 로 올린다(참조용 `v2.md` 도 함께 갱신). 과거
+     원문은 배치 재파싱(`POST /api/parse` `{ batch: true }`)으로 새 버전에 맞춰 다시 만든다.
+   - **파싱 규칙의 유일한 원본은 `tests/golden/RULES.md`(R1~R12)다.** 프롬프트와
+     골든셋은 항상 같은 규칙을 따른다. 규칙을 바꾸면 RULES.md → 프롬프트 → 골든셋
+     순서로 함께 갱신한다.
+   - **LLM 은 `confidence`/`needs_review` 를 출력하지 않는다.** 사실만 뽑고,
+     confidence 는 `src/lib/parser/confidence.ts` 가 R6 로 계산한다. (골든 테스트가
+     산수가 아니라 파싱 품질을 재도록.)
 
 ## 스택 (고정 — 변경 금지)
 
@@ -32,11 +45,11 @@
 
 ```
 src/app/api/entries/route.ts   원문 수신 (POST → raw_entries INSERT, 즉시 200, 파싱은 비동기)
-src/app/api/parse/route.ts     파싱 트리거 (raw_entry → events/hypotheses 재생성)
+src/app/api/parse/route.ts     파싱 트리거 (raw_entry → events/hypotheses/unparsed 재생성)
 src/lib/db/                    Supabase 클라이언트 + DB 행 타입
-src/lib/parser/                LLM 파싱 로직
-src/lib/parser/prompts/        버전별 프롬프트 (v1.md 부터)
-supabase/migrations/           DB 스키마 (0001_init.sql)
+src/lib/parser/                LLM 파싱 로직 + confidence 계산(R6)
+src/lib/parser/prompts/vN.ts   버전별 프롬프트 원본(문자열 상수). vN.md 는 참조용 사본
+supabase/migrations/           DB 스키마 (0001 스키마 · 0002 원문불변 트리거 · 0003 unparsed)
 tests/golden/                  골든 테스트셋 (case-*.json + 러너)
 ```
 
@@ -46,6 +59,8 @@ tests/golden/                  골든 테스트셋 (case-*.json + 러너)
 - `events` — 파싱된 사실. 카테고리는 `food | mood | sleep | energy` 4개로 한정.
   카테고리별 payload 스키마는 기획서 §5.3.
 - `hypotheses` — 사용자가 스스로 던진 추측. `status: open|supported|not_supported|dismissed`.
+- `unparsed_fragments` — 4개 카테고리로 못 담은 건강 신호 원문. events 와 같은 생명주기의
+  파생 데이터(재파싱 시 삭제·재생성). Phase 2 재파싱 재료.
 
 ## Phase 0 제약
 

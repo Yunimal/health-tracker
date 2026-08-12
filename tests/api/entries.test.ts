@@ -8,11 +8,21 @@ vi.mock("@/lib/env", () => ({
     supabaseUrl: () => "http://mock",
     supabaseServiceRoleKey: () => "mock-key",
     anthropicApiKey: () => "mock-anthropic",
+    ingestToken: () => "test-token",
   },
 }));
+// next/server 의 after 만 no-op 스파이로 대체(백그라운드 파싱이 실제로 돌지 않도록).
+// NextResponse 는 실제 구현을 유지한다.
+vi.mock("next/server", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("next/server")>();
+  return { ...actual, after: vi.fn() };
+});
 
+import { after } from "next/server";
 import { getSupabaseClient } from "@/lib/db/client";
 import { POST, GET } from "@/app/api/entries/route";
+
+const AUTH = "Bearer test-token";
 
 type Result = { data: unknown; error: { message: string } | null };
 
@@ -50,24 +60,58 @@ function useSupabase(result: Result) {
   return mock;
 }
 
-function postReq(body: unknown, rawJson?: string) {
+function postReq(body: unknown, opts: { rawJson?: string; auth?: string | null } = {}) {
+  const headers: Record<string, string> = { "content-type": "application/json" };
+  const auth = opts.auth === undefined ? AUTH : opts.auth;
+  if (auth) headers["authorization"] = auth;
   return new Request("http://localhost/api/entries", {
     method: "POST",
-    headers: { "content-type": "application/json" },
-    body: rawJson ?? JSON.stringify(body),
+    headers,
+    body: opts.rawJson ?? JSON.stringify(body),
   });
 }
 
-function getReq(query: string) {
-  return new Request(`http://localhost/api/entries${query}`);
+function getReq(query: string, auth: string | null | undefined = AUTH) {
+  const headers: Record<string, string> = {};
+  if (auth) headers["authorization"] = auth;
+  return new Request(`http://localhost/api/entries${query}`, { headers });
 }
 
 beforeEach(() => {
   vi.clearAllMocks();
 });
 
+describe("인증 (Authorization: Bearer INGEST_TOKEN)", () => {
+  it("POST: 토큰이 없으면 401 이고 INSERT 하지 않는다", async () => {
+    const mock = useSupabase({ data: null, error: null });
+    const res = await POST(postReq({ transcript: "밥", source: "voice" }, { auth: null }));
+    expect(res.status).toBe(401);
+    expect(mock.calls.insert).toBeUndefined();
+  });
+
+  it("POST: 토큰이 틀리면 401 이다", async () => {
+    useSupabase({ data: null, error: null });
+    const res = await POST(
+      postReq({ transcript: "밥", source: "voice" }, { auth: "Bearer wrong" }),
+    );
+    expect(res.status).toBe(401);
+  });
+
+  it("GET: 토큰이 없으면 401 이다", async () => {
+    useSupabase({ data: [], error: null });
+    const res = await GET(getReq("?date=2026-08-10", null));
+    expect(res.status).toBe(401);
+  });
+
+  it("GET: 토큰이 틀리면 401 이다", async () => {
+    useSupabase({ data: [], error: null });
+    const res = await GET(getReq("?date=2026-08-10", "Bearer wrong"));
+    expect(res.status).toBe(401);
+  });
+});
+
 describe("POST /api/entries", () => {
-  it("유효한 body 를 저장하고 201 을 반환한다", async () => {
+  it("유효한 body 를 저장하고 201 을 반환하며 파싱을 백그라운드로 트리거한다", async () => {
     const row = { id: "e1", transcript: "커피 한 모금" };
     const mock = useSupabase({ data: row, error: null });
 
@@ -88,6 +132,8 @@ describe("POST /api/entries", () => {
       source: "voice",
       recorded_at: "2026-08-10T09:00:00+09:00",
     });
+    // 파싱은 백그라운드(after)로 스케줄되고 응답은 기다리지 않는다.
+    expect(vi.mocked(after)).toHaveBeenCalledTimes(1);
   });
 
   it("recorded_at 이 없으면 서버 KST 시각을 사용한다", async () => {
@@ -123,14 +169,15 @@ describe("POST /api/entries", () => {
 
   it("본문이 유효한 JSON 이 아니면 400 이다", async () => {
     useSupabase({ data: null, error: null });
-    const res = await POST(postReq(null, "{ not json"));
+    const res = await POST(postReq(null, { rawJson: "{ not json" }));
     expect(res.status).toBe(400);
   });
 
-  it("DB 오류 시 500 을 반환한다", async () => {
+  it("DB 오류 시 500 을 반환하고 파싱을 트리거하지 않는다", async () => {
     useSupabase({ data: null, error: { message: "boom" } });
     const res = await POST(postReq({ transcript: "밥 먹음", source: "voice" }));
     expect(res.status).toBe(500);
+    expect(vi.mocked(after)).not.toHaveBeenCalled();
   });
 });
 

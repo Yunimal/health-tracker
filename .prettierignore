@@ -3,6 +3,9 @@ node_modules
 pnpm-lock.yaml
 .specstory
 
+# 골든 채점기 생성물 (모델별 점수 스냅샷)
+tests/golden/results
+
 # 스펙 원본 — 포매터가 건드리지 않는다.
 기획서.md
 tests/golden/RULES.md

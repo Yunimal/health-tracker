@@ -16,11 +16,12 @@ export type FoodKind = "food" | "drink" | "skipped_meal";
 export type MealType = "breakfast" | "lunch" | "dinner" | "snack";
 
 export interface FoodPayload {
-  name: string;
-  name_raw: string;
+  // 결식(skipped_meal)이면 name/name_raw/amount_* 는 모두 null 이다. (RULES R11/R12)
+  name: string | null;
+  name_raw: string | null;
   kind: FoodKind;
   meal_type: MealType | null;
-  amount_text: string; // 원문 보존 (필수)
+  amount_text: string | null; // 원문 보존. 양 미언급이면 null (R12)
   amount_value: number | null; // 추정치, 없으면 null
   amount_unit: string | null;
   completion_ratio: number | null; // "80% 정도 먹음" → 0.8
@@ -122,5 +123,15 @@ export interface Hypothesis {
   effect_hint: string | null;
   mention_count: number;
   status: HypothesisStatus;
+  created_at: string;
+}
+
+// ── unparsed_fragments ─────────────────────────────────────────────────────
+// 4개 카테고리로 담지 못한 건강 신호 원문. events 와 같은 생명주기의 파생 데이터. (RULES R2)
+export interface UnparsedFragment {
+  id: string;
+  raw_entry_id: string;
+  user_id: string;
+  text: string;
   created_at: string;
 }

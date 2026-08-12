@@ -17,4 +17,6 @@ export const env = {
   supabaseServiceRoleKey: () => required("SUPABASE_SERVICE_ROLE_KEY"),
   anthropicApiKey: () => required("ANTHROPIC_API_KEY"),
   userId: () => required("USER_ID"),
+  // /api/entries 수신 인증용 공유 토큰. iOS 단축어가 Bearer 로 보낸다.
+  ingestToken: () => required("INGEST_TOKEN"),
 };

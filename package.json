@@ -14,7 +14,7 @@
     "format:check": "prettier --check .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:golden": "vitest run tests/golden"
+    "test:golden": "vitest run --config vitest.golden.config.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.68.0",
