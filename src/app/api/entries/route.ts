@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getSupabaseClient } from "@/lib/db/client";
 import { env } from "@/lib/env";
 import { reparseEntry } from "@/lib/parser/persist";
+import { excludeHidden } from "@/lib/db/filters";
 import type { RawEntry, RawEntryInsert } from "@/lib/db/schema";
 
 /**
@@ -127,13 +128,16 @@ export async function GET(request: Request): Promise<NextResponse> {
   const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
 
   const supabase = getSupabaseClient();
-  const { data, error } = await supabase
-    .from("raw_entries")
-    .select("*")
-    .eq("user_id", env.userId())
-    .gte("recorded_at", dayStart.toISOString())
-    .lt("recorded_at", dayEnd.toISOString())
-    .order("recorded_at", { ascending: true });
+  // 숨긴 원문은 제외한다(공통 필터). (기획서 §5.1 소프트 삭제)
+  const query = excludeHidden(
+    supabase
+      .from("raw_entries")
+      .select("*")
+      .eq("user_id", env.userId())
+      .gte("recorded_at", dayStart.toISOString())
+      .lt("recorded_at", dayEnd.toISOString()),
+  );
+  const { data, error } = await query.order("recorded_at", { ascending: true });
 
   if (error) {
     return NextResponse.json({ error: "query_failed", detail: error.message }, { status: 500 });

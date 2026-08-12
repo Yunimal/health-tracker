@@ -70,6 +70,7 @@ export interface RawEntry {
   parse_version: string | null;
   parsed_at: string | null;
   parse_error: string | null;
+  hidden_at: string | null; // 소프트 삭제(숨김) 시각. null 이면 보임. (0004)
   created_at: string;
 }
 

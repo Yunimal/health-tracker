@@ -93,3 +93,34 @@ export async function deleteEvent(eventId: string): Promise<ActionResult> {
   revalidatePath("/");
   return { ok: true };
 }
+
+/**
+ * 원문 숨김(소프트 삭제) / 복원. hidden_at 만 갱신하므로 0002/0004 트리거가 허용한다.
+ * 완전 삭제(DELETE)는 하지 않는다 — 원문은 보존된다. events 는 건드리지 않는다
+ * (화면에서만 함께 숨겨지고, 재파싱하면 어차피 다시 생성된다).
+ */
+export async function hideEntry(rawEntryId: string): Promise<ActionResult> {
+  const supabase = getSupabaseClient();
+  const userId = env.userId();
+  const { error } = await supabase
+    .from("raw_entries")
+    .update({ hidden_at: new Date().toISOString() })
+    .eq("id", rawEntryId)
+    .eq("user_id", userId);
+  if (error) return { ok: false, error: error.message };
+  revalidatePath("/");
+  return { ok: true };
+}
+
+export async function unhideEntry(rawEntryId: string): Promise<ActionResult> {
+  const supabase = getSupabaseClient();
+  const userId = env.userId();
+  const { error } = await supabase
+    .from("raw_entries")
+    .update({ hidden_at: null })
+    .eq("id", rawEntryId)
+    .eq("user_id", userId);
+  if (error) return { ok: false, error: error.message };
+  revalidatePath("/");
+  return { ok: true };
+}

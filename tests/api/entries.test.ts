@@ -34,7 +34,7 @@ function makeSupabase(result: Result) {
   };
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const builder: any = {};
-  for (const m of ["insert", "select", "eq", "gte", "lt", "order"]) {
+  for (const m of ["insert", "select", "eq", "gte", "lt", "is", "order"]) {
     builder[m] = vi.fn((...args: unknown[]) => {
       record(m, args);
       return builder;

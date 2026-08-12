@@ -1,6 +1,7 @@
 import "server-only";
 import { getSupabaseClient } from "@/lib/db/client";
 import { env } from "@/lib/env";
+import { excludeHidden } from "@/lib/db/filters";
 import type { Category, Hypothesis, RawEntry, UnparsedFragment } from "@/lib/db/schema";
 
 /** 타임라인 표시용 이벤트(행 그대로, payload 는 jsonb 이므로 느슨하게). */
@@ -51,18 +52,21 @@ function groupBy<T>(rows: T[], key: (r: T) => string | null): Map<string, T[]> {
  * events / hypotheses / unparsed_fragments 와 함께 반환한다. (기획서 §4.1)
  * 서버 전용(service role). 브라우저는 이 함수를 직접 호출하지 않는다.
  */
-export async function getDayTimeline(date: string): Promise<TimelineData[]> {
+export async function getDayTimeline(date: string, includeHidden = false): Promise<TimelineData[]> {
   const supabase = getSupabaseClient();
   const userId = env.userId();
   const [start, end] = kstDayRange(date);
 
-  const { data: entries, error } = await supabase
+  let entriesQuery = supabase
     .from("raw_entries")
     .select("*")
     .eq("user_id", userId)
     .gte("recorded_at", start)
-    .lt("recorded_at", end)
-    .order("recorded_at", { ascending: false });
+    .lt("recorded_at", end);
+  // 기본은 숨긴 원문 제외. "숨긴 항목 보기" 토글일 때만 포함한다.
+  if (!includeHidden) entriesQuery = excludeHidden(entriesQuery);
+
+  const { data: entries, error } = await entriesQuery.order("recorded_at", { ascending: false });
   if (error) throw new Error(error.message);
   const rawEntries = (entries ?? []) as RawEntry[];
   if (rawEntries.length === 0) return [];

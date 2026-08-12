@@ -2,14 +2,20 @@ import { getDayTimeline, todayKstDate } from "@/lib/db/queries";
 import TextEntryForm from "./_components/TextEntryForm";
 import DateNav from "./_components/DateNav";
 import EntryCard from "./_components/EntryCard";
+import ShowHiddenToggle from "./_components/ShowHiddenToggle";
 
 // DB/searchParams 에 의존하는 동적 페이지. 프리렌더하지 않는다.
 export const dynamic = "force-dynamic";
 
-export default async function Page({ searchParams }: { searchParams: Promise<{ date?: string }> }) {
+export default async function Page({
+  searchParams,
+}: {
+  searchParams: Promise<{ date?: string; showHidden?: string }>;
+}) {
   const sp = await searchParams;
   const date = sp.date && /^\d{4}-\d{2}-\d{2}$/.test(sp.date) ? sp.date : todayKstDate();
-  const timeline = await getDayTimeline(date);
+  const showHidden = sp.showHidden === "1";
+  const timeline = await getDayTimeline(date, showHidden);
 
   return (
     <main className="mx-auto flex max-w-3xl flex-col gap-4 p-4">
@@ -18,7 +24,10 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ d
         <TextEntryForm />
         <div className="flex items-center justify-between">
           <DateNav date={date} />
-          <span className="text-xs text-gray-500">{timeline.length}건</span>
+          <div className="flex items-center gap-3">
+            <ShowHiddenToggle date={date} showHidden={showHidden} />
+            <span className="text-xs text-gray-500">{timeline.length}건</span>
+          </div>
         </div>
       </header>
 
