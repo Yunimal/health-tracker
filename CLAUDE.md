@@ -41,6 +41,9 @@
 - Next.js 15 App Router + TypeScript (strict)
 - Supabase (Postgres, RLS)
 - Anthropic SDK (`@anthropic-ai/sdk`) — structured output 으로 JSON 강제
+- 파싱 모델: 기본 `claude-sonnet-5` (env `PARSE_MODEL` 로 오버라이드). v6 골든셋에서
+  Opus 4.8 과 동일한 41/41 만점(오분류 0)인데 비용이 낮아 기본값으로 채택. 환경변수를
+  깜빡해도 비싼 모델로 떨어지지 않도록 기본값 자체를 Sonnet 으로 둔다.
 - 테스트: vitest
 - 패키지 매니저: pnpm
 

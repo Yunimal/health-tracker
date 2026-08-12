@@ -1,0 +1,464 @@
+{
+  "parse_version": "v5",
+  "model": "claude-opus-4-8",
+  "generated_at": "2026-08-12T06:47:17.414Z",
+  "case_count": 18,
+  "totals": {
+    "events_expected": 41,
+    "events_actual": 41,
+    "events_matched": 41,
+    "events_missed": 0,
+    "events_extra": 0,
+    "detection_recall": 1,
+    "detection_precision": 1,
+    "detection_f1": 1,
+    "category_correct": 41,
+    "category_accuracy": 1,
+    "occurred_at_within_tol": 41,
+    "occurred_at_pass_rate": 1,
+    "hypotheses_expected": 6,
+    "hypotheses_actual": 7,
+    "hypotheses_matched": 6,
+    "hypothesis_misclassifications": 1
+  },
+  "cases": [
+    {
+      "name": "case-001",
+      "events": {
+        "expected": 6,
+        "actual": 6,
+        "matched": 6,
+        "missed": 0,
+        "extra": 0,
+        "categoryCorrect": 6,
+        "withinTolerance": 6,
+        "missedEvents": [],
+        "extraEvents": [],
+        "categoryErrors": [],
+        "timeErrors": []
+      },
+      "hypotheses": {
+        "expected": 1,
+        "actual": 1,
+        "matched": 1,
+        "misclassifications": 0,
+        "missing": [],
+        "spurious": []
+      }
+    },
+    {
+      "name": "case-002",
+      "events": {
+        "expected": 5,
+        "actual": 5,
+        "matched": 5,
+        "missed": 0,
+        "extra": 0,
+        "categoryCorrect": 5,
+        "withinTolerance": 5,
+        "missedEvents": [],
+        "extraEvents": [],
+        "categoryErrors": [],
+        "timeErrors": []
+      },
+      "hypotheses": {
+        "expected": 1,
+        "actual": 1,
+        "matched": 1,
+        "misclassifications": 0,
+        "missing": [],
+        "spurious": []
+      }
+    },
+    {
+      "name": "case-003",
+      "events": {
+        "expected": 2,
+        "actual": 2,
+        "matched": 2,
+        "missed": 0,
+        "extra": 0,
+        "categoryCorrect": 2,
+        "withinTolerance": 2,
+        "missedEvents": [],
+        "extraEvents": [],
+        "categoryErrors": [],
+        "timeErrors": []
+      },
+      "hypotheses": {
+        "expected": 1,
+        "actual": 1,
+        "matched": 1,
+        "misclassifications": 0,
+        "missing": [],
+        "spurious": []
+      }
+    },
+    {
+      "name": "case-004",
+      "events": {
+        "expected": 2,
+        "actual": 2,
+        "matched": 2,
+        "missed": 0,
+        "extra": 0,
+        "categoryCorrect": 2,
+        "withinTolerance": 2,
+        "missedEvents": [],
+        "extraEvents": [],
+        "categoryErrors": [],
+        "timeErrors": []
+      },
+      "hypotheses": {
+        "expected": 1,
+        "actual": 1,
+        "matched": 1,
+        "misclassifications": 0,
+        "missing": [],
+        "spurious": []
+      }
+    },
+    {
+      "name": "case-005",
+      "events": {
+        "expected": 1,
+        "actual": 1,
+        "matched": 1,
+        "missed": 0,
+        "extra": 0,
+        "categoryCorrect": 1,
+        "withinTolerance": 1,
+        "missedEvents": [],
+        "extraEvents": [],
+        "categoryErrors": [],
+        "timeErrors": []
+      },
+      "hypotheses": {
+        "expected": 1,
+        "actual": 1,
+        "matched": 1,
+        "misclassifications": 0,
+        "missing": [],
+        "spurious": []
+      }
+    },
+    {
+      "name": "case-006",
+      "events": {
+        "expected": 3,
+        "actual": 3,
+        "matched": 3,
+        "missed": 0,
+        "extra": 0,
+        "categoryCorrect": 3,
+        "withinTolerance": 3,
+        "missedEvents": [],
+        "extraEvents": [],
+        "categoryErrors": [],
+        "timeErrors": []
+      },
+      "hypotheses": {
+        "expected": 0,
+        "actual": 0,
+        "matched": 0,
+        "misclassifications": 0,
+        "missing": [],
+        "spurious": []
+      }
+    },
+    {
+      "name": "case-007",
+      "events": {
+        "expected": 1,
+        "actual": 1,
+        "matched": 1,
+        "missed": 0,
+        "extra": 0,
+        "categoryCorrect": 1,
+        "withinTolerance": 1,
+        "missedEvents": [],
+        "extraEvents": [],
+        "categoryErrors": [],
+        "timeErrors": []
+      },
+      "hypotheses": {
+        "expected": 0,
+        "actual": 0,
+        "matched": 0,
+        "misclassifications": 0,
+        "missing": [],
+        "spurious": []
+      }
+    },
+    {
+      "name": "case-008",
+      "events": {
+        "expected": 0,
+        "actual": 0,
+        "matched": 0,
+        "missed": 0,
+        "extra": 0,
+        "categoryCorrect": 0,
+        "withinTolerance": 0,
+        "missedEvents": [],
+        "extraEvents": [],
+        "categoryErrors": [],
+        "timeErrors": []
+      },
+      "hypotheses": {
+        "expected": 0,
+        "actual": 0,
+        "matched": 0,
+        "misclassifications": 0,
+        "missing": [],
+        "spurious": []
+      }
+    },
+    {
+      "name": "case-009",
+      "events": {
+        "expected": 3,
+        "actual": 3,
+        "matched": 3,
+        "missed": 0,
+        "extra": 0,
+        "categoryCorrect": 3,
+        "withinTolerance": 3,
+        "missedEvents": [],
+        "extraEvents": [],
+        "categoryErrors": [],
+        "timeErrors": []
+      },
+      "hypotheses": {
+        "expected": 0,
+        "actual": 0,
+        "matched": 0,
+        "misclassifications": 0,
+        "missing": [],
+        "spurious": []
+      }
+    },
+    {
+      "name": "case-010",
+      "events": {
+        "expected": 1,
+        "actual": 1,
+        "matched": 1,
+        "missed": 0,
+        "extra": 0,
+        "categoryCorrect": 1,
+        "withinTolerance": 1,
+        "missedEvents": [],
+        "extraEvents": [],
+        "categoryErrors": [],
+        "timeErrors": []
+      },
+      "hypotheses": {
+        "expected": 0,
+        "actual": 0,
+        "matched": 0,
+        "misclassifications": 0,
+        "missing": [],
+        "spurious": []
+      }
+    },
+    {
+      "name": "case-011",
+      "events": {
+        "expected": 1,
+        "actual": 1,
+        "matched": 1,
+        "missed": 0,
+        "extra": 0,
+        "categoryCorrect": 1,
+        "withinTolerance": 1,
+        "missedEvents": [],
+        "extraEvents": [],
+        "categoryErrors": [],
+        "timeErrors": []
+      },
+      "hypotheses": {
+        "expected": 0,
+        "actual": 0,
+        "matched": 0,
+        "misclassifications": 0,
+        "missing": [],
+        "spurious": []
+      }
+    },
+    {
+      "name": "case-012",
+      "events": {
+        "expected": 2,
+        "actual": 2,
+        "matched": 2,
+        "missed": 0,
+        "extra": 0,
+        "categoryCorrect": 2,
+        "withinTolerance": 2,
+        "missedEvents": [],
+        "extraEvents": [],
+        "categoryErrors": [],
+        "timeErrors": []
+      },
+      "hypotheses": {
+        "expected": 0,
+        "actual": 0,
+        "matched": 0,
+        "misclassifications": 0,
+        "missing": [],
+        "spurious": []
+      }
+    },
+    {
+      "name": "case-013",
+      "events": {
+        "expected": 2,
+        "actual": 2,
+        "matched": 2,
+        "missed": 0,
+        "extra": 0,
+        "categoryCorrect": 2,
+        "withinTolerance": 2,
+        "missedEvents": [],
+        "extraEvents": [],
+        "categoryErrors": [],
+        "timeErrors": []
+      },
+      "hypotheses": {
+        "expected": 1,
+        "actual": 1,
+        "matched": 1,
+        "misclassifications": 0,
+        "missing": [],
+        "spurious": []
+      }
+    },
+    {
+      "name": "case-014",
+      "events": {
+        "expected": 2,
+        "actual": 2,
+        "matched": 2,
+        "missed": 0,
+        "extra": 0,
+        "categoryCorrect": 2,
+        "withinTolerance": 2,
+        "missedEvents": [],
+        "extraEvents": [],
+        "categoryErrors": [],
+        "timeErrors": []
+      },
+      "hypotheses": {
+        "expected": 0,
+        "actual": 0,
+        "matched": 0,
+        "misclassifications": 0,
+        "missing": [],
+        "spurious": []
+      }
+    },
+    {
+      "name": "case-015",
+      "events": {
+        "expected": 2,
+        "actual": 2,
+        "matched": 2,
+        "missed": 0,
+        "extra": 0,
+        "categoryCorrect": 2,
+        "withinTolerance": 2,
+        "missedEvents": [],
+        "extraEvents": [],
+        "categoryErrors": [],
+        "timeErrors": []
+      },
+      "hypotheses": {
+        "expected": 0,
+        "actual": 0,
+        "matched": 0,
+        "misclassifications": 0,
+        "missing": [],
+        "spurious": []
+      }
+    },
+    {
+      "name": "case-016",
+      "events": {
+        "expected": 3,
+        "actual": 3,
+        "matched": 3,
+        "missed": 0,
+        "extra": 0,
+        "categoryCorrect": 3,
+        "withinTolerance": 3,
+        "missedEvents": [],
+        "extraEvents": [],
+        "categoryErrors": [],
+        "timeErrors": []
+      },
+      "hypotheses": {
+        "expected": 0,
+        "actual": 0,
+        "matched": 0,
+        "misclassifications": 0,
+        "missing": [],
+        "spurious": []
+      }
+    },
+    {
+      "name": "case-017",
+      "events": {
+        "expected": 1,
+        "actual": 1,
+        "matched": 1,
+        "missed": 0,
+        "extra": 0,
+        "categoryCorrect": 1,
+        "withinTolerance": 1,
+        "missedEvents": [],
+        "extraEvents": [],
+        "categoryErrors": [],
+        "timeErrors": []
+      },
+      "hypotheses": {
+        "expected": 0,
+        "actual": 0,
+        "matched": 0,
+        "misclassifications": 0,
+        "missing": [],
+        "spurious": []
+      }
+    },
+    {
+      "name": "case-018",
+      "events": {
+        "expected": 4,
+        "actual": 4,
+        "matched": 4,
+        "missed": 0,
+        "extra": 0,
+        "categoryCorrect": 4,
+        "withinTolerance": 4,
+        "missedEvents": [],
+        "extraEvents": [],
+        "categoryErrors": [],
+        "timeErrors": []
+      },
+      "hypotheses": {
+        "expected": 0,
+        "actual": 1,
+        "matched": 0,
+        "misclassifications": 1,
+        "missing": [],
+        "spurious": [
+          {
+            "statement": "점심에 김치찌개 먹고 나서 속이 더부룩해",
+            "cause_hint": "김치찌개",
+            "effect_hint": "속 더부룩함"
+          }
+        ]
+      }
+    }
+  ]
+}

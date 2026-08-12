@@ -29,9 +29,12 @@ export async function reparseEntry(
   supabase: SupabaseClient,
   userId: string,
   entry: RawEntry,
+  opts: { cachePrompt?: boolean } = {},
 ): Promise<EntryOutcome> {
   try {
-    const result = await parseTranscript(entry.transcript, entry.recorded_at);
+    const result = await parseTranscript(entry.transcript, entry.recorded_at, {
+      cachePrompt: opts.cachePrompt ?? false,
+    });
 
     const delEvents = await supabase.from("events").delete().eq("raw_entry_id", entry.id);
     if (delEvents.error) throw new Error(delEvents.error.message);

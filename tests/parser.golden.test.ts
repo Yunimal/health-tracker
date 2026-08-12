@@ -1,7 +1,8 @@
 import { describe, it, beforeAll, expect } from "vitest";
 import { readFileSync, readdirSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
 import { join } from "node:path";
-import { parseTranscript, PARSE_MODEL, PARSE_VERSION } from "@/lib/parser";
+import { parseTranscript, PARSE_VERSION, getApiCallCount, resetApiCallCount } from "@/lib/parser";
+import { env } from "@/lib/env";
 import {
   scoreCase,
   scoreSuite,
@@ -13,12 +14,14 @@ import {
 
 /**
  * 골든 채점 스위트 — **실제 Anthropic API 를 호출한다.** CI 제외, 로컬 전용.
- * 전용 설정으로만 실행된다: `pnpm test:golden` (vitest.golden.config.ts).
- * 기본 `pnpm test` 는 이 파일을 exclude 한다.
+ * 실행: `pnpm test:golden` (scripts/golden.mjs → vitest.golden.config.ts).
+ * 옵션: `-- --case case-005` (특정 케이스만), `-- --runs 3` (반복). 기본 `pnpm test` 는 제외.
  */
 
 const GOLDEN_DIR = join(process.cwd(), "tests", "golden");
 const RESULTS_DIR = join(GOLDEN_DIR, "results");
+const CASE_FILTER = process.env.GOLDEN_CASE?.trim() || null; // 예: "case-005"
+const RUNS = Math.max(1, Number(process.env.GOLDEN_RUNS ?? "1"));
 
 /** vitest 는 .env.local 을 자동 로드하지 않는다. 있으면 직접 읽어 넣는다. */
 function loadEnvLocal(): void {
@@ -37,6 +40,7 @@ function loadCases(): {
 }[] {
   return readdirSync(GOLDEN_DIR)
     .filter((f) => /^case-\d+\.json$/.test(f))
+    .filter((f) => !CASE_FILTER || f.replace(/\.json$/, "") === CASE_FILTER)
     .sort()
     .map((f) => {
       const data = JSON.parse(readFileSync(join(GOLDEN_DIR, f), "utf8"));
@@ -47,6 +51,7 @@ function loadCases(): {
 async function runGoldenSuite(): Promise<SuiteReport> {
   loadEnvLocal();
   const cases = loadCases();
+  resetApiCallCount();
   const results: CaseResult[] = [];
 
   for (const c of cases) {
@@ -54,7 +59,10 @@ async function runGoldenSuite(): Promise<SuiteReport> {
     let actual: ReturnType<typeof toScoreSide>;
     let error: string | undefined;
     try {
-      const parsed = await parseTranscript(c.input.transcript, c.input.recorded_at);
+      // 골든 채점은 같은 프롬프트로 연속 호출하므로 프롬프트 캐싱을 켠다.
+      const parsed = await parseTranscript(c.input.transcript, c.input.recorded_at, {
+        cachePrompt: true,
+      });
       actual = toScoreSide(parsed);
     } catch (err) {
       error = err instanceof Error ? err.message : String(err);
@@ -66,19 +74,24 @@ async function runGoldenSuite(): Promise<SuiteReport> {
 
   const report = scoreSuite(results, {
     parse_version: PARSE_VERSION,
-    model: PARSE_MODEL,
+    model: env.parseModel(),
     generated_at: new Date().toISOString(),
   });
 
   // 결과 저장: 모델명을 파일명에 넣어 모델 간 비교 가능.
   mkdirSync(RESULTS_DIR, { recursive: true });
-  const safeModel = PARSE_MODEL.replace(/[^a-zA-Z0-9._-]/g, "_");
+  const safeModel = env.parseModel().replace(/[^a-zA-Z0-9._-]/g, "_");
   const outPath = join(RESULTS_DIR, `${PARSE_VERSION}-${safeModel}.json`);
   writeFileSync(outPath, JSON.stringify(report, null, 2) + "\n", "utf8");
 
-  // 사람이 읽는 표.
+  // 사람이 읽는 표 + 호출 수.
   console.log("\n" + renderTable(report));
-  console.log(`\n결과 저장: ${outPath}\n`);
+  console.log(
+    `\n${cases.length} cases, ${getApiCallCount()} API calls` +
+      (CASE_FILTER ? `  (필터: ${CASE_FILTER})` : "") +
+      `  · model=${env.parseModel()}`,
+  );
+  console.log(`결과 저장: ${outPath}\n`);
 
   return report;
 }
@@ -98,26 +111,30 @@ function misclassificationSummary(report: SuiteReport): string {
 }
 
 describe("골든 채점 (실제 API)", () => {
-  let report: SuiteReport;
+  const reports: SuiteReport[] = [];
 
   beforeAll(async () => {
-    report = await runGoldenSuite();
+    for (let i = 0; i < RUNS; i++) {
+      if (RUNS > 1) console.log(`\n═════ RUN ${i + 1}/${RUNS} ═════`);
+      reports.push(await runGoldenSuite());
+    }
   });
 
-  // §6.3: 가설/사실 오분류가 가장 중요한 지표. 1건이라도 있으면 FAIL.
-  it("가설/사실 오분류 0건", () => {
-    expect(
-      report.totals.hypothesis_misclassifications,
-      `가설/사실 오분류 ${report.totals.hypothesis_misclassifications}건:\n${misclassificationSummary(report)}`,
-    ).toBe(0);
+  // §6.3: 가설/사실 오분류가 가장 중요한 지표. 어느 run 이든 1건이라도 있으면 FAIL.
+  it("가설/사실 오분류 0건 (모든 run)", () => {
+    const bad = reports
+      .map((r, i) => ({ i, n: r.totals.hypothesis_misclassifications, r }))
+      .filter((x) => x.n > 0);
+    const detail = bad.map((x) => `run ${x.i + 1}:\n${misclassificationSummary(x.r)}`).join("\n");
+    expect(bad.length, `${RUNS} run 중 ${bad.length} run 에서 오분류:\n${detail}`).toBe(0);
   });
 
-  // 나머지 지표는 리포트만. FAIL 시키지 않는다(지금은 점수를 재는 게 목적).
+  // 나머지 지표는 리포트만. FAIL 시키지 않는다.
   it("나머지 지표는 리포트만 (통과 목적 아님)", () => {
-    const t = report.totals;
+    const t = reports[reports.length - 1]!.totals;
     console.log(
       `[참고] 이벤트 F1 ${(t.detection_f1 * 100).toFixed(0)}% · 카테고리 ${(t.category_accuracy * 100).toFixed(0)}% · occurred_at±1h ${(t.occurred_at_pass_rate * 100).toFixed(0)}%`,
     );
-    expect(report.case_count).toBeGreaterThan(0);
+    expect(reports[0]!.case_count).toBeGreaterThan(0);
   });
 });

@@ -19,10 +19,24 @@
         },
         "confidence": 0.6,
         "needs_review": true
+      },
+      {
+        "category": "menstrual",
+        "occurred_at": "2026-08-16T10:00:00+09:00",
+        "occurred_at_precision": "hour",
+        "payload": {
+          "kind": "ongoing",
+          "cycle_day": null,
+          "flow": "spotting",
+          "pain": null,
+          "note": "거의 안 묻어남"
+        },
+        "confidence": 0.8,
+        "needs_review": false
       }
     ],
     "hypotheses": [],
     "unparsed": []
   },
-  "_covers": ["menstrual 종료"]
+  "_covers": ["menstrual 종료", "종료 진술+당일 관찰 분리"]
 }

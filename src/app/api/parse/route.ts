@@ -61,7 +61,8 @@ export async function POST(request: Request): Promise<NextResponse> {
   const results: EntryOutcome[] = [];
   for (const entry of (data ?? []) as RawEntry[]) {
     // 발화당 1회 호출 원칙에 따라 순차 처리한다. (기획서 §10)
-    results.push(await reparseEntry(supabase, userId, entry));
+    // 배치는 같은 프롬프트로 연속 호출하므로 프롬프트 캐싱을 켠다.
+    results.push(await reparseEntry(supabase, userId, entry, { cachePrompt: true }));
   }
   const failed = results.filter((r) => !r.ok).length;
   return NextResponse.json({ count: results.length, failed, results }, { status: 200 });

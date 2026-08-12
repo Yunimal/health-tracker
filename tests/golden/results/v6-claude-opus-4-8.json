@@ -1,0 +1,50 @@
+{
+  "parse_version": "v6",
+  "model": "claude-opus-4-8",
+  "generated_at": "2026-08-12T08:18:02.016Z",
+  "case_count": 1,
+  "totals": {
+    "events_expected": 1,
+    "events_actual": 1,
+    "events_matched": 1,
+    "events_missed": 0,
+    "events_extra": 0,
+    "detection_recall": 1,
+    "detection_precision": 1,
+    "detection_f1": 1,
+    "category_correct": 1,
+    "category_accuracy": 1,
+    "occurred_at_within_tol": 1,
+    "occurred_at_pass_rate": 1,
+    "hypotheses_expected": 1,
+    "hypotheses_actual": 1,
+    "hypotheses_matched": 1,
+    "hypothesis_misclassifications": 0
+  },
+  "cases": [
+    {
+      "name": "case-005",
+      "events": {
+        "expected": 1,
+        "actual": 1,
+        "matched": 1,
+        "missed": 0,
+        "extra": 0,
+        "categoryCorrect": 1,
+        "withinTolerance": 1,
+        "missedEvents": [],
+        "extraEvents": [],
+        "categoryErrors": [],
+        "timeErrors": []
+      },
+      "hypotheses": {
+        "expected": 1,
+        "actual": 1,
+        "matched": 1,
+        "misclassifications": 0,
+        "missing": [],
+        "spurious": []
+      }
+    }
+  ]
+}

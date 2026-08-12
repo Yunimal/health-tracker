@@ -19,4 +19,7 @@ export const env = {
   userId: () => required("USER_ID"),
   // /api/entries 수신 인증용 공유 토큰. iOS 단축어가 Bearer 로 보낸다.
   ingestToken: () => required("INGEST_TOKEN"),
+  // 파싱 모델. env(PARSE_MODEL)로 오버라이드 가능. 기본값 claude-sonnet-5 —
+  // v6 골든셋에서 Opus 4.8 과 동일한 41/41 만점(오분류 0)인데 비용이 훨씬 낮다.
+  parseModel: () => process.env.PARSE_MODEL ?? "claude-sonnet-5",
 };

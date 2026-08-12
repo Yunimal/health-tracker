@@ -5,6 +5,9 @@ import { computeConfidence } from "./confidence";
 import { PROMPT_V1 } from "./prompts/v1";
 import { PROMPT_V2 } from "./prompts/v2";
 import { PROMPT_V3 } from "./prompts/v3";
+import { PROMPT_V4 } from "./prompts/v4";
+import { PROMPT_V5 } from "./prompts/v5";
+import { PROMPT_V6 } from "./prompts/v6";
 import type { Category, OccurredAtPrecision } from "@/lib/db/schema";
 
 /**
@@ -14,12 +17,21 @@ import type { Category, OccurredAtPrecision } from "@/lib/db/schema";
  * 뽑고(payload + is_range_expression), confidence 는 computeConfidence 가 R6 로 계산한다.
  */
 
-export const PARSE_MODEL = "claude-opus-4-8";
+/** 파싱 모델은 env(PARSE_MODEL)로 오버라이드. 기본값은 env.parseModel() 참고. */
 
 /** 프롬프트 파일명과 동기화한다. 프롬프트를 고치면 prompts/vN.ts 를 새로 만들고 이 값을 올린다. */
-export const PARSE_VERSION = "v3";
+export const PARSE_VERSION = "v6";
 
 const MAX_TOKENS = 4096;
+
+// 실제 Anthropic API 호출 횟수(재시도 포함). 골든 채점에서 호출 수를 콘솔에 찍는다.
+let apiCallCount = 0;
+export function getApiCallCount(): number {
+  return apiCallCount;
+}
+export function resetApiCallCount(): void {
+  apiCallCount = 0;
+}
 
 // ── LLM 출력 스키마 (zod). 범위 제약을 런타임에 강제한다. ────────────────────
 const precisionSchema = z.enum(["exact", "hour", "part_of_day", "date"]);
@@ -136,7 +148,14 @@ export class ParseError extends Error {
 // ── 구현 ─────────────────────────────────────────────────────────────────────
 // 버전별 프롬프트 레지스트리. 프롬프트는 문자열 상수라 번들에 항상 포함된다(fs 접근 없음).
 // 새 버전은 prompts/vN.ts 를 만들어 여기에 등록하고 PARSE_VERSION 을 올린다.
-const PROMPTS: Record<string, string> = { v1: PROMPT_V1, v2: PROMPT_V2, v3: PROMPT_V3 };
+const PROMPTS: Record<string, string> = {
+  v1: PROMPT_V1,
+  v2: PROMPT_V2,
+  v3: PROMPT_V3,
+  v4: PROMPT_V4,
+  v5: PROMPT_V5,
+  v6: PROMPT_V6,
+};
 
 function loadSystemPrompt(version: string): string {
   const prompt = PROMPTS[version];
@@ -159,11 +178,22 @@ function tryParseJson(text: string): unknown {
   }
 }
 
-async function callModel(client: Anthropic, system: string, userJson: string): Promise<string> {
+async function callModel(
+  client: Anthropic,
+  system: string,
+  userJson: string,
+  cachePrompt: boolean,
+): Promise<string> {
+  apiCallCount++;
   const msg = await client.messages.create({
-    model: PARSE_MODEL,
+    model: env.parseModel(),
     max_tokens: MAX_TOKENS,
-    system,
+    // 프롬프트 캐싱(SDK 0.68 GA, beta 헤더 불필요)은 호출부가 켤 때만 건다.
+    // 캐시 쓰기 1.25x / 읽기 0.1x 이므로 5분 TTL 안에 2회 이상 호출될 때만 이득 —
+    // 골든 채점·배치 재파싱만 true. 단발 호출은 false(쓰기 프리미엄만 물게 됨).
+    system: cachePrompt
+      ? [{ type: "text", text: system, cache_control: { type: "ephemeral" } }]
+      : system,
     messages: [{ role: "user", content: userJson }],
   });
   return msg.content.map((b) => (b.type === "text" ? b.text : "")).join("");
@@ -224,6 +254,12 @@ function validateAndScore(raw: unknown): ParseResult {
   return { events, hypotheses, unparsed, parse_version: PARSE_VERSION };
 }
 
+/** 파싱 옵션. cachePrompt 는 5분 TTL 안에 같은 프롬프트로 2회 이상 호출될 때만 켠다. */
+export interface ParseOptions {
+  /** 시스템 프롬프트에 프롬프트 캐싱을 걸지 여부. 기본 false(단발 호출은 손해). */
+  cachePrompt?: boolean;
+}
+
 /**
  * 발화 1건을 파싱한다. JSON 파싱 실패 시 1회 재시도하고, 그래도 실패하면 ParseError.
  * 스키마를 통과한 이벤트에만 R6 confidence 를 채운다.
@@ -231,14 +267,16 @@ function validateAndScore(raw: unknown): ParseResult {
 export async function parseTranscript(
   transcript: string,
   recordedAt: string,
+  opts: ParseOptions = {},
 ): Promise<ParseResult> {
+  const cachePrompt = opts.cachePrompt ?? false;
   const system = loadSystemPrompt(PARSE_VERSION);
   const client = new Anthropic({ apiKey: env.anthropicApiKey() });
   const userJson = JSON.stringify({ transcript, recorded_at: recordedAt });
 
   let parsed: unknown = null;
   for (let attempt = 0; attempt < 2; attempt++) {
-    const text = await callModel(client, system, userJson);
+    const text = await callModel(client, system, userJson, cachePrompt);
     parsed = tryParseJson(text);
     if (parsed !== null) break;
     if (attempt === 0) console.warn("[parser] LLM 출력이 JSON 이 아님 — 1회 재시도");
