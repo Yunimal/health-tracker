@@ -1,0 +1,13 @@
+{
+  "input": {
+    "transcript": "오늘은 결국 운동을 못 했어.",
+    "recorded_at": "2026-08-13T22:00:00+09:00",
+    "dictionary": {}
+  },
+  "expected": {
+    "events": [],
+    "hypotheses": [],
+    "unparsed": ["오늘 운동 못 함"]
+  },
+  "_covers": ["activity", "운동 안 함(이벤트 없음, unparsed 만) R18"]
+}

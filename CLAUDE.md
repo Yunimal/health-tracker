@@ -56,7 +56,8 @@ src/lib/db/                    Supabase 클라이언트 + DB 행 타입
 src/lib/parser/                LLM 파싱 로직 + confidence 계산(R6)
 src/lib/parser/prompts/vN.ts   버전별 프롬프트 원본(문자열 상수). vN.md 는 참조용 사본
 supabase/migrations/           DB 스키마 (0001 스키마 · 0002 원문불변 트리거 · 0003 unparsed ·
-                               0004 hidden_at · 0005 카테고리 확장 · 0006 다중 사용자)
+                               0004 hidden_at · 0005 카테고리 확장 · 0006 다중 사용자 ·
+                               0007 activity 카테고리)
 src/lib/auth.ts                토큰 → 사용자 해석 (API: Bearer, 웹: httpOnly 쿠키)
 src/app/login/                 토큰 붙여넣기 로그인 페이지
 tests/golden/                  골든 테스트셋 (case-*.json + 러너)
@@ -66,7 +67,8 @@ tests/golden/                  골든 테스트셋 (case-*.json + 러너)
 
 - `raw_entries` — 원문. 불변.
 - `events` — 파싱된 사실. 카테고리는 `food | mood | sleep | energy | menstrual | bowel |
-medication` 7개 (0005 로 확장). payload 스키마는 기획서 §5.3 및 RULES R11/R14~R16.
+medication | activity` 8개 (0005 로 7개 확장 · 0007 로 activity 추가). payload 스키마는
+  기획서 §5.3 및 RULES R11/R14~R16/R18.
 - `hypotheses` — 사용자가 스스로 던진 추측. `status: open|supported|not_supported|dismissed`.
 - `unparsed_fragments` — 4개 카테고리로 못 담은 건강 신호 원문. events 와 같은 생명주기의
   파생 데이터(재파싱 시 삭제·재생성). Phase 2 재파싱 재료.
@@ -90,8 +92,8 @@ medication` 7개 (0005 로 확장). payload 스키마는 기획서 §5.3 및 RUL
 ## Phase 0 제약
 
 - UI 컴포넌트, 파싱 로직 구현은 각 STEP 에서 점진적으로 만든다.
-- 항목은 초기 4개(food/mood/sleep/energy)에서 시작해 menstrual/bowel/medication 를
-  추가(0005). 나머지(몸무게·혈압·혈당 등)는 이후 단계.
+- 항목은 초기 4개(food/mood/sleep/energy)에서 시작해 menstrual/bowel/medication(0005)·
+  activity(0007) 를 추가. 나머지(몸무게·혈압·혈당 등)는 이후 단계.
 
 ## 명령어
 

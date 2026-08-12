@@ -36,6 +36,9 @@ const FIELD_LABEL: Record<string, string> = {
   dose_unit: "단위",
   dose_from: "이전 용량",
   dose_to: "새 용량",
+  duration_min: "시간(분)",
+  distance_km: "거리(km)",
+  intensity_text: "강도(원문)",
 };
 
 const CATEGORIES: Category[] = [
@@ -46,6 +49,7 @@ const CATEGORIES: Category[] = [
   "menstrual",
   "bowel",
   "medication",
+  "activity",
 ];
 
 /** occurred_at(ISO, 대개 UTC) ↔ datetime-local. 입력창은 KST 벽시계로 취급한다. */
@@ -87,6 +91,14 @@ function initFields(category: Category, p: Record<string, unknown>): Fields {
         dose_unit: s("dose_unit"),
         dose_from: s("dose_from"),
         dose_to: s("dose_to"),
+        note: s("note"),
+      };
+    case "activity":
+      return {
+        name: s("name"),
+        duration_min: n("duration_min"),
+        distance_km: n("distance_km"),
+        intensity_text: s("intensity_text"),
         note: s("note"),
       };
   }
@@ -148,6 +160,15 @@ function buildPayload(
         dose_unit: strOrNull(f.dose_unit!),
         dose_from: strOrNull(f.dose_from!),
         dose_to: strOrNull(f.dose_to!),
+        note: strOrNull(f.note!),
+      };
+    case "activity":
+      return {
+        ...base,
+        name: f.name ?? "",
+        duration_min: numOrNull(f.duration_min!),
+        distance_km: numOrNull(f.distance_km!),
+        intensity_text: strOrNull(f.intensity_text!),
         note: strOrNull(f.note!),
       };
   }

@@ -1,0 +1,28 @@
+{
+  "input": {
+    "transcript": "방금 산책 다녀왔어.",
+    "recorded_at": "2026-08-13T19:30:00+09:00",
+    "dictionary": {}
+  },
+  "expected": {
+    "events": [
+      {
+        "category": "activity",
+        "occurred_at": "2026-08-13T19:30:00+09:00",
+        "occurred_at_precision": "exact",
+        "payload": {
+          "name": "산책",
+          "duration_min": null,
+          "distance_km": null,
+          "intensity_text": null,
+          "note": null
+        },
+        "confidence": 1.0,
+        "needs_review": false
+      }
+    ],
+    "hypotheses": [],
+    "unparsed": []
+  },
+  "_covers": ["activity", "시간 없는 운동(duration null)", "방금→exact"]
+}

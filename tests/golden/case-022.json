@@ -1,0 +1,45 @@
+{
+  "input": {
+    "transcript": "점심에 김밥 먹고 바로 산책 다녀왔어.",
+    "recorded_at": "2026-08-13T13:00:00+09:00",
+    "dictionary": {}
+  },
+  "expected": {
+    "events": [
+      {
+        "category": "food",
+        "occurred_at": "2026-08-13T12:30:00+09:00",
+        "occurred_at_precision": "part_of_day",
+        "payload": {
+          "name": "김밥",
+          "name_raw": "김밥",
+          "kind": "food",
+          "meal_type": "lunch",
+          "amount_text": null,
+          "amount_value": null,
+          "amount_unit": null,
+          "completion_ratio": null
+        },
+        "confidence": 0.5,
+        "needs_review": true
+      },
+      {
+        "category": "activity",
+        "occurred_at": "2026-08-13T12:30:00+09:00",
+        "occurred_at_precision": "part_of_day",
+        "payload": {
+          "name": "산책",
+          "duration_min": null,
+          "distance_km": null,
+          "intensity_text": null,
+          "note": null
+        },
+        "confidence": 0.8,
+        "needs_review": false
+      }
+    ],
+    "hypotheses": [],
+    "unparsed": []
+  },
+  "_covers": ["activity", "food", "운동+식사 연접(순서≠인과, R1)"]
+}

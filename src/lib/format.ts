@@ -10,6 +10,7 @@ export const CATEGORY_LABEL: Record<Category, string> = {
   menstrual: "생리",
   bowel: "배변",
   medication: "약",
+  activity: "운동",
 };
 
 /** 한글 라벨과 함께 쓰는 아이콘. 영어 코드명은 화면에 노출하지 않는다. */
@@ -21,6 +22,7 @@ export const CATEGORY_ICON: Record<Category, string> = {
   menstrual: "🩸",
   bowel: "🚽",
   medication: "💊",
+  activity: "🏃",
 };
 
 const SOURCE_LABEL: Record<string, string> = { voice: "음성", text: "텍스트" };
@@ -231,6 +233,18 @@ export function summarizeEvent(category: Category, payload: Record<string, unkno
       if (dose) s += ` · ${dose}`;
       if (note) s += ` · ${note}`;
       return s;
+    }
+    case "activity": {
+      const parts: string[] = [str(p, "name") ?? "운동"];
+      const dur = num(p, "duration_min");
+      if (dur != null) parts.push(`${dur}분`);
+      const dist = num(p, "distance_km");
+      if (dist != null) parts.push(`${dist}km`);
+      const intensity = str(p, "intensity_text");
+      if (intensity) parts.push(intensity);
+      const note = str(p, "note");
+      if (note) parts.push(note);
+      return parts.join(" · ");
     }
   }
 }

@@ -22,6 +22,20 @@
         },
         "confidence": 0.5,
         "needs_review": true
+      },
+      {
+        "category": "activity",
+        "occurred_at": "2026-08-08T12:00:00+09:00",
+        "occurred_at_precision": "date",
+        "payload": {
+          "name": "등산",
+          "duration_min": null,
+          "distance_km": null,
+          "intensity_text": null,
+          "note": null
+        },
+        "confidence": 0.8,
+        "needs_review": false
       }
     ],
     "hypotheses": [
@@ -31,7 +45,7 @@
         "effect_hint": "다리 뻐근함"
       }
     ],
-    "unparsed": ["지난 주말에 등산 갔다 옴", "월요일까지 다리가 뻐근했어"]
+    "unparsed": ["월요일까지 다리가 뻐근했어"]
   },
-  "_covers": ["과거 시간 표현", "food", "energy"]
+  "_covers": ["과거 시간 표현", "food", "activity", "unparsed→activity 승격"]
 }

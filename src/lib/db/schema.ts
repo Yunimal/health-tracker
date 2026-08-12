@@ -6,7 +6,8 @@
 
 // ── 공통 enum (SQL CHECK 제약과 동일) ──────────────────────────────────────
 export type Source = "voice" | "text";
-export type Category = "food" | "mood" | "sleep" | "energy" | "menstrual" | "bowel" | "medication";
+export type Category =
+  "food" | "mood" | "sleep" | "energy" | "menstrual" | "bowel" | "medication" | "activity";
 export type OccurredAtPrecision = "exact" | "hour" | "part_of_day" | "date";
 export type HypothesisStatus = "open" | "supported" | "not_supported" | "dismissed";
 
@@ -93,6 +94,15 @@ export interface MedicationPayload {
   note: string | null;
 }
 
+// activity — 운동·신체활동. (RULES R18)
+export interface ActivityPayload {
+  name: string; // 발화에 쓰인 단어 그대로. "산책"을 "걷기"로 바꾸지 않는다.
+  duration_min: number | null; // "30분" → 30
+  distance_km: number | null; // "5km" → 5
+  intensity_text: string | null; // 원문 표현 그대로. 숫자화하지 않는다.
+  note: string | null;
+}
+
 export type EventPayload =
   | FoodPayload
   | MoodPayload
@@ -100,7 +110,8 @@ export type EventPayload =
   | EnergyPayload
   | MenstrualPayload
   | BowelPayload
-  | MedicationPayload;
+  | MedicationPayload
+  | ActivityPayload;
 
 // ── raw_entries ────────────────────────────────────────────────────────────
 export interface RawEntry {
@@ -166,9 +177,20 @@ export interface MedicationEvent extends EventBase {
   category: "medication";
   payload: MedicationPayload;
 }
+export interface ActivityEvent extends EventBase {
+  category: "activity";
+  payload: ActivityPayload;
+}
 
 export type Event =
-  FoodEvent | MoodEvent | SleepEvent | EnergyEvent | MenstrualEvent | BowelEvent | MedicationEvent;
+  | FoodEvent
+  | MoodEvent
+  | SleepEvent
+  | EnergyEvent
+  | MenstrualEvent
+  | BowelEvent
+  | MedicationEvent
+  | ActivityEvent;
 
 // ── hypotheses ─────────────────────────────────────────────────────────────
 export interface Hypothesis {

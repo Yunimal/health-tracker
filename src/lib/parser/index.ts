@@ -8,6 +8,7 @@ import { PROMPT_V3 } from "./prompts/v3";
 import { PROMPT_V4 } from "./prompts/v4";
 import { PROMPT_V5 } from "./prompts/v5";
 import { PROMPT_V6 } from "./prompts/v6";
+import { PROMPT_V7 } from "./prompts/v7";
 import type { Category, OccurredAtPrecision } from "@/lib/db/schema";
 
 /**
@@ -20,7 +21,7 @@ import type { Category, OccurredAtPrecision } from "@/lib/db/schema";
 /** 파싱 모델은 env(PARSE_MODEL)로 오버라이드. 기본값은 env.parseModel() 참고. */
 
 /** 프롬프트 파일명과 동기화한다. 프롬프트를 고치면 prompts/vN.ts 를 새로 만들고 이 값을 올린다. */
-export const PARSE_VERSION = "v6";
+export const PARSE_VERSION = "v7";
 
 const MAX_TOKENS = 4096;
 
@@ -92,6 +93,15 @@ const medicationPayloadSchema = z.object({
   note: z.string().nullable(),
 });
 
+// activity — 운동·신체활동. (R18) intensity 는 숫자화하지 않고 원문 그대로.
+const activityPayloadSchema = z.object({
+  name: z.string(),
+  duration_min: z.number().int().nullable(),
+  distance_km: z.number().nullable(),
+  intensity_text: z.string().nullable(),
+  note: z.string().nullable(),
+});
+
 const eventBase = {
   occurred_at: z.string(),
   occurred_at_precision: precisionSchema,
@@ -106,6 +116,7 @@ const llmEventSchema = z.discriminatedUnion("category", [
   z.object({ category: z.literal("menstrual"), payload: menstrualPayloadSchema, ...eventBase }),
   z.object({ category: z.literal("bowel"), payload: bowelPayloadSchema, ...eventBase }),
   z.object({ category: z.literal("medication"), payload: medicationPayloadSchema, ...eventBase }),
+  z.object({ category: z.literal("activity"), payload: activityPayloadSchema, ...eventBase }),
 ]);
 
 const hypothesisSchema = z.object({
@@ -155,6 +166,7 @@ const PROMPTS: Record<string, string> = {
   v4: PROMPT_V4,
   v5: PROMPT_V5,
   v6: PROMPT_V6,
+  v7: PROMPT_V7,
 };
 
 function loadSystemPrompt(version: string): string {

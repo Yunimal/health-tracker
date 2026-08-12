@@ -1,0 +1,28 @@
+{
+  "input": {
+    "transcript": "오늘 아침에 동네 한 바퀴 30분 정도 걸었어.",
+    "recorded_at": "2026-08-13T09:00:00+09:00",
+    "dictionary": {}
+  },
+  "expected": {
+    "events": [
+      {
+        "category": "activity",
+        "occurred_at": "2026-08-13T08:00:00+09:00",
+        "occurred_at_precision": "part_of_day",
+        "payload": {
+          "name": "걷기",
+          "duration_min": 30,
+          "distance_km": null,
+          "intensity_text": null,
+          "note": "동네 한 바퀴"
+        },
+        "confidence": 0.8,
+        "needs_review": false
+      }
+    ],
+    "hypotheses": [],
+    "unparsed": []
+  },
+  "_covers": ["activity", "시간 명시된 운동(duration_min=30)"]
+}

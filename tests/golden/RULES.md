@@ -34,6 +34,9 @@ DRAFT.md 검토 결과 확정된 파싱 규칙. STEP 3 의 파싱 프롬프트(v
 ~고 나서, ~다음에, ~이후에, ~하고, ~한 뒤에
 "김치찌개 먹고 나서 더부룩" 은 순서를 말한 것이지 원인을 주장한 것이 아니다.
 
+"~는데" 는 검토했으나 비인과 용법이 압도적이라("밥 먹었는데 배고파") 목록에 넣지 않았다.
+실사용에서 인과 용법이 자주 확인되면 재검토한다.
+
 (실제 사용 중 목록에 없는 인과 표현이 발견되면 이 목록에 추가한다.
  목록을 열어두고 파서가 판단하게 하지 않는다 — 없는 가설을 만드는 것이
  놓치는 것보다 해롭다)
@@ -100,6 +103,10 @@ Phase 2 에서 appetite 카테고리를 추가할 1순위 후보이므로 unpars
 | 시간 단서 없음 | recorded_at | hour |
 
 날짜는 발화의 상대 표현("어제","지난 주말")을 recorded_at 기준으로 계산한다.
+
+주말은 이틀(토·일)에 걸쳐 모호하므로 **토요일로 고정**한다(결정성 우선):
+- "지난 주말" → recorded_at 직전 토요일, 12:00, precision "date"
+- "이번 주말" → recorded_at 기준 가장 가까운 토요일, 12:00, precision "date"
 
 날짜 단서만 있고 시간대 키워드가 없을 때:
 - sleep 카테고리 → 해당 날짜 23:00, precision "part_of_day" (기존 유지)
@@ -257,6 +264,37 @@ payload:
 hypothesis 가 아니라 fact 로 기록하되 confidence 에서 -0.20 한다.
 R1 은 인과 주장에만 적용된다. 사실에 대한 불확신은 인과가 아니다.
 
+## R18. activity — 운동·신체활동
+
+payload:
+  name: 문자열 (필수)                 "산책", "등산", "헬스"
+  duration_min: 정수 또는 null         "30분" → 30
+  distance_km: 숫자 또는 null          "5km" → 5
+  intensity_text: 원문 표현 또는 null  "빡세게", "가볍게"
+  note: 문자열 또는 null
+
+- intensity 를 숫자로 매기지 않는다. 사람마다 기준이 달라 비교가 무의미하다.
+  말한 표현을 intensity_text 에 그대로 보존한다. (mood/energy 의 수치화와 다른 처리)
+- name 은 발화에 쓰인 단어를 그대로 쓴다. "산책"을 "걷기"로 바꾸지 않는다.
+  용어 통일은 조회 시점의 일이다.
+- duration_min / distance_km 이 없어도 confidence 를 깎지 않는다.
+  R16(medication) 의 dose 와 같은 이유 — 되물어도 정확한 답이 나오지 않는
+  항목은 되물을 수 있는 항목이 아니다.
+
+### 운동을 하지 않은 것은 기록하지 않는다
+
+"오늘 운동 못 했어" 는 activity 이벤트로 만들지 않는다. 발화 원문은 unparsed 에 남긴다.
+
+이유: 끼니는 하루 세 번이라는 정해진 슬롯이 있어 결식(skipped_meal)이 관찰이 되지만,
+운동에는 슬롯이 없다. "안 했다" 를 이벤트로 만들면 말한 날만 기록되고 말하지 않은 날은
+누락되어, 집계가 실제와 어긋난다. 운동을 안 한 날은 activity 이벤트가 없는 날로 표현된다.
+(medication 의 skipped 와 다르게 취급하는 이유: 약은 정해진 복용 스케줄이라는 슬롯이 있다)
+
+### 운동 후 증상은 activity 가 아니다
+
+근육통, 뻐근함, 알 배김 등은 행동이 아니라 결과인 증상이므로 activity 에 넣지 않고
+unparsed 로 보낸다. activity 는 행동을 담는 카테고리다. (R15 의 소화 증상 분리와 같은 원칙)
+
 ======================= 케이스별 확정 =======================
 
 | case | 항목 | 확정 |
@@ -268,9 +306,9 @@ R1 은 인과 주장에만 적용된다. 사실에 대한 불확신은 인과가
 | 001 | 멜라토닌 | cause_hint + unparsed 별도 보존 (R2) |
 | 002 | "잠 설쳐서 처졌다" | fact(sleep) + fact(energy) + hypothesis (R1) |
 | 002 | 토스트+계란 | 이벤트 2건으로 분리. 나중에 계란 단독 패턴을 볼 수 있어야 함 |
-| 005 | 등산 | unparsed |
-| 005 | 다리 뻐근함 | unparsed. 근육통은 각성 수준이 아니라 운동의 결과이므로 등산과 함께 유예 |
-| 005 | 등산→다리 뻐근 | hypothesis 생성 (R1). 등산·뻐근 원문은 unparsed 유지 |
+| 005 | 등산 | **activity 이벤트** (R18). "지난 주말"→토요일 8/8 12:00 date. unparsed 에서 이동 |
+| 005 | 다리 뻐근함 | unparsed 유지. 근육통은 운동의 결과인 증상 (R18) |
+| 005 | 등산→다리 뻐근 | hypothesis 존치 (R1, "~와서"=인과). 등산은 activity 로 잡히고 뻐근함 원문만 unparsed |
 | 007 | 배고픔 | unparsed (R3) |
 | 007 | 점심 결식 | skipped_meal, name null (R11). amount 페널티 없음 → conf 0.80 (R6) |
 | 008 | 전체 | events / hypotheses / unparsed 모두 빈 배열 (R2) |
@@ -286,6 +324,18 @@ R1 은 인과 주장에만 적용된다. 사실에 대한 불확신은 인과가
 | 016 | 약 3건 | 유산균(taken) + 비타민D(taken) + 오메가3(skipped) |
 | 017 | 약 용량 변경 | medication(dose_change, 갑상선약, dose_from="반 알", dose_to="한 알") |
 | 018 | 혼재 | food(김치찌개) + menstrual(ongoing, cycle_day=2) + medication(taken, 유산균) + energy(피곤). "더부룩" → unparsed (R15) |
+| 019 | 시간 명시 운동 | activity(걷기), duration_min=30. "아침"→08:00 part_of_day (conf 0.80) |
+| 020 | 시간 없는 운동 | activity(산책), duration_min=null. "방금"→recorded_at exact (conf 1.00) |
+| 021 | 강도 표현 | activity(운동), intensity_text="빡세게" 원문 보존. 강도 숫자화 금지 (R18). "저녁"→19:00 part_of_day |
+| 022 | 운동+식사 연접 | food(김밥) + activity(산책) @ 점심 12:30. "먹고 바로"=시간 순서 → hypothesis 아님 (R1 닫힌 목록) |
+| 023 | 운동 후 증상 | activity(등산) @ 어제 12:00 date + unparsed(허벅지 뻐근함). **hypothesis 없음** — "~는데"는 R1 목록 밖(비인과) |
+| 024 | 운동 안 함 | activity 이벤트 없음 (R18). 발화는 unparsed 로만 |
+
+> case-023 은 hypothesis 를 만들지 않는다. "어제 등산 다녀왔는데 오늘 뻐근하네" 의 "~는데"는
+> R1 의 닫힌 인과 연결어 목록(~해서/~때문에/~라서/~인지/~탓에) 밖이고 비인과 용법이
+> 압도적이다(R1 하단 참고). "~는데+증상" 을 인과로 좁혀 잡게 하면 파서가 "결과가 증상인가"를
+> 스스로 판단해야 하고, 그 판단을 열었다가 v5 에서 case-018 이 깨졌다 — 목록을 닫아 둔 이유다.
+> (case-005 의 "~와서"는 R1 목록 안이라 hypothesis 존치한다.)
 
 ======================= RULES.md 내용 끝 =======================
 
@@ -307,3 +357,12 @@ Q6~Q8 도 규칙에 반영되어 해소됨:
   이벤트 필드" 명시. 018 은 pain=3, cycle_day=2 유지.
 - Q8 (menstrual start cycle_day) → **R14** 에 "start 이면 cycle_day 1" 명문화.
   case-011 을 cycle_day 1 로 수정.
+
+DRAFT3 확정(운동 카테고리):
+
+- **R18** 신설(activity). name 원문 보존 · intensity 숫자화 금지 · duration/distance null
+  페널티 없음 · "운동 안 함" 미기록(unparsed) · 운동 후 증상은 unparsed.
+  case-019~024 확정, case-005 는 등산을 unparsed→activity 로 이동(hypothesis·뻐근함은 유지).
+- case-023 "~는데": R1 에 **추가하지 않기로 확정**. hypothesis 제거(activity+unparsed 만).
+  R1 하단에 검토 결과 명시.
+- R6 에 주말 시각 규칙 추가(지난/이번 주말 → 토요일 12:00 date).

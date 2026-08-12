@@ -1,0 +1,28 @@
+{
+  "input": {
+    "transcript": "저녁에 헬스장 가서 빡세게 운동하고 왔어.",
+    "recorded_at": "2026-08-13T21:00:00+09:00",
+    "dictionary": {}
+  },
+  "expected": {
+    "events": [
+      {
+        "category": "activity",
+        "occurred_at": "2026-08-13T19:00:00+09:00",
+        "occurred_at_precision": "part_of_day",
+        "payload": {
+          "name": "운동",
+          "duration_min": null,
+          "distance_km": null,
+          "intensity_text": "빡세게",
+          "note": "헬스장"
+        },
+        "confidence": 0.8,
+        "needs_review": false
+      }
+    ],
+    "hypotheses": [],
+    "unparsed": []
+  },
+  "_covers": ["activity", "강도 표현(intensity_text 원문 보존)"]
+}

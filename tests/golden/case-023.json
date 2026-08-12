@@ -1,0 +1,28 @@
+{
+  "input": {
+    "transcript": "어제 등산 다녀왔는데 오늘 허벅지가 뻐근하네.",
+    "recorded_at": "2026-08-13T10:00:00+09:00",
+    "dictionary": {}
+  },
+  "expected": {
+    "events": [
+      {
+        "category": "activity",
+        "occurred_at": "2026-08-12T12:00:00+09:00",
+        "occurred_at_precision": "date",
+        "payload": {
+          "name": "등산",
+          "duration_min": null,
+          "distance_km": null,
+          "intensity_text": null,
+          "note": null
+        },
+        "confidence": 0.8,
+        "needs_review": false
+      }
+    ],
+    "hypotheses": [],
+    "unparsed": ["오늘 허벅지가 뻐근함"]
+  },
+  "_covers": ["activity", "운동 후 증상(근육통→unparsed)", "~는데=비인과(R1 목록 밖)"]
+}
