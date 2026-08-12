@@ -1,0 +1,28 @@
+{
+  "input": {
+    "transcript": "오늘 아침에 생리 시작했어. 양은 아직 적어.",
+    "recorded_at": "2026-08-12T09:00:00+09:00",
+    "dictionary": {}
+  },
+  "expected": {
+    "events": [
+      {
+        "category": "menstrual",
+        "occurred_at": "2026-08-12T08:00:00+09:00",
+        "occurred_at_precision": "part_of_day",
+        "payload": {
+          "kind": "start",
+          "cycle_day": 1,
+          "flow": "light",
+          "pain": null,
+          "note": null
+        },
+        "confidence": 0.8,
+        "needs_review": false
+      }
+    ],
+    "hypotheses": [],
+    "unparsed": []
+  },
+  "_covers": ["menstrual 시작", "출혈량"]
+}

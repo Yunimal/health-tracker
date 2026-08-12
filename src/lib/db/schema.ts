@@ -6,7 +6,7 @@
 
 // ── 공통 enum (SQL CHECK 제약과 동일) ──────────────────────────────────────
 export type Source = "voice" | "text";
-export type Category = "food" | "mood" | "sleep" | "energy";
+export type Category = "food" | "mood" | "sleep" | "energy" | "menstrual" | "bowel" | "medication";
 export type OccurredAtPrecision = "exact" | "hour" | "part_of_day" | "date";
 export type HypothesisStatus = "open" | "supported" | "not_supported" | "dismissed";
 
@@ -57,7 +57,50 @@ export interface EnergyPayload {
   note: string | null;
 }
 
-export type EventPayload = FoodPayload | MoodPayload | SleepPayload | EnergyPayload;
+// menstrual — 관찰된 주기 사실만. (RULES R14)
+export type MenstrualKind = "start" | "end" | "ongoing";
+export type MenstrualFlow = "spotting" | "light" | "normal" | "heavy";
+export type MenstrualPain = 1 | 2 | 3 | 4 | 5;
+
+export interface MenstrualPayload {
+  kind: MenstrualKind;
+  cycle_day: number | null;
+  flow: MenstrualFlow | null;
+  pain: MenstrualPain | null;
+  note: string | null;
+}
+
+// bowel — 배변 활동. (RULES R15)
+export type BristolScale = 1 | 2 | 3 | 4 | 5 | 6 | 7;
+
+export interface BowelPayload {
+  bristol: BristolScale | null;
+  count: number | null;
+  note: string | null;
+}
+
+// medication — 약·영양제. (RULES R16)
+export type MedicationKind = "taken" | "skipped" | "dose_change";
+
+export interface MedicationPayload {
+  kind: MedicationKind;
+  name: string;
+  dose_text: string | null;
+  dose_value: number | null;
+  dose_unit: string | null;
+  dose_from: string | null; // dose_change 일 때만
+  dose_to: string | null; // dose_change 일 때만
+  note: string | null;
+}
+
+export type EventPayload =
+  | FoodPayload
+  | MoodPayload
+  | SleepPayload
+  | EnergyPayload
+  | MenstrualPayload
+  | BowelPayload
+  | MedicationPayload;
 
 // ── raw_entries ────────────────────────────────────────────────────────────
 export interface RawEntry {
@@ -111,8 +154,21 @@ export interface EnergyEvent extends EventBase {
   category: "energy";
   payload: EnergyPayload;
 }
+export interface MenstrualEvent extends EventBase {
+  category: "menstrual";
+  payload: MenstrualPayload;
+}
+export interface BowelEvent extends EventBase {
+  category: "bowel";
+  payload: BowelPayload;
+}
+export interface MedicationEvent extends EventBase {
+  category: "medication";
+  payload: MedicationPayload;
+}
 
-export type Event = FoodEvent | MoodEvent | SleepEvent | EnergyEvent;
+export type Event =
+  FoodEvent | MoodEvent | SleepEvent | EnergyEvent | MenstrualEvent | BowelEvent | MedicationEvent;
 
 // ── hypotheses ─────────────────────────────────────────────────────────────
 export interface Hypothesis {

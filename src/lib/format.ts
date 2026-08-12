@@ -7,6 +7,9 @@ export const CATEGORY_LABEL: Record<Category, string> = {
   mood: "기분",
   sleep: "수면",
   energy: "기력",
+  menstrual: "생리",
+  bowel: "배변",
+  medication: "약",
 };
 
 const str = (p: Record<string, unknown>, k: string): string | undefined =>
@@ -55,6 +58,27 @@ export function summarizePayload(category: Category, payload: Record<string, unk
       const level = num(payload, "level");
       const note = str(payload, "note");
       return `기력 ${level ?? "?"}${note ? ` · ${note}` : ""}`;
+    }
+    case "menstrual": {
+      const kind = str(payload, "kind") ?? "?";
+      const cycleDay = num(payload, "cycle_day");
+      const flow = str(payload, "flow");
+      const pain = num(payload, "pain");
+      return `생리 ${kind}${cycleDay != null ? ` · ${cycleDay}일차` : ""}${flow ? ` · ${flow}` : ""}${pain != null ? ` · 통증 ${pain}` : ""}`;
+    }
+    case "bowel": {
+      const bristol = num(payload, "bristol");
+      const count = num(payload, "count");
+      return `배변${bristol != null ? ` · 브리스톨 ${bristol}` : ""}${count != null ? ` · ${count}회` : ""}`;
+    }
+    case "medication": {
+      const name = str(payload, "name") ?? "(이름 없음)";
+      const kind = str(payload, "kind") ?? "?";
+      const doseText = str(payload, "dose_text");
+      const from = str(payload, "dose_from");
+      const to = str(payload, "dose_to");
+      const dose = from || to ? ` (${from ?? "?"}→${to ?? "?"})` : doseText ? ` · ${doseText}` : "";
+      return `${name} [${kind}]${dose}`;
     }
   }
 }

@@ -1,0 +1,77 @@
+{
+  "input": {
+    "transcript": "점심에 김치찌개 먹고 나서 속이 더부룩해. 생리 이틀째라 아랫배도 아프고, 오후엔 유산균 하나 먹었어. 계속 피곤하네.",
+    "recorded_at": "2026-08-12T15:30:00+09:00",
+    "dictionary": {}
+  },
+  "expected": {
+    "events": [
+      {
+        "category": "food",
+        "occurred_at": "2026-08-12T12:30:00+09:00",
+        "occurred_at_precision": "part_of_day",
+        "payload": {
+          "name": "김치찌개",
+          "name_raw": "김치찌개",
+          "kind": "food",
+          "meal_type": "lunch",
+          "amount_text": null,
+          "amount_value": null,
+          "amount_unit": null,
+          "completion_ratio": null
+        },
+        "confidence": 0.5,
+        "needs_review": true
+      },
+      {
+        "category": "menstrual",
+        "occurred_at": "2026-08-12T15:30:00+09:00",
+        "occurred_at_precision": "hour",
+        "payload": {
+          "kind": "ongoing",
+          "cycle_day": 2,
+          "flow": null,
+          "pain": 3,
+          "note": "아랫배 통증(생리통)"
+        },
+        "confidence": 0.8,
+        "needs_review": false
+      },
+      {
+        "category": "medication",
+        "occurred_at": "2026-08-12T15:00:00+09:00",
+        "occurred_at_precision": "part_of_day",
+        "payload": {
+          "kind": "taken",
+          "name": "유산균",
+          "dose_text": "하나",
+          "dose_value": 1,
+          "dose_unit": null,
+          "dose_from": null,
+          "dose_to": null,
+          "note": null
+        },
+        "confidence": 0.8,
+        "needs_review": false
+      },
+      {
+        "category": "energy",
+        "occurred_at": "2026-08-12T15:30:00+09:00",
+        "occurred_at_precision": "hour",
+        "payload": { "level": 2, "note": "계속 피곤함" },
+        "confidence": 0.8,
+        "needs_review": false
+      }
+    ],
+    "hypotheses": [],
+    "unparsed": ["속이 더부룩해"]
+  },
+  "_covers": [
+    "새+기존 카테고리 혼재",
+    "food",
+    "energy",
+    "menstrual",
+    "medication",
+    "소화불량(애매)"
+  ]
+}

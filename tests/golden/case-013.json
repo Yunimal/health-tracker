@@ -1,0 +1,41 @@
+{
+  "input": {
+    "transcript": "생리 시작 며칠 전이라 그런지 계속 예민하고 별것도 아닌데 짜증이 나. 몸도 무겁고.",
+    "recorded_at": "2026-08-09T21:00:00+09:00",
+    "dictionary": {}
+  },
+  "expected": {
+    "events": [
+      {
+        "category": "mood",
+        "occurred_at": "2026-08-09T21:00:00+09:00",
+        "occurred_at_precision": "hour",
+        "payload": {
+          "label": "짜증",
+          "valence": -1,
+          "arousal": 2,
+          "note": "계속 예민하고 짜증남"
+        },
+        "confidence": 0.8,
+        "needs_review": false
+      },
+      {
+        "category": "energy",
+        "occurred_at": "2026-08-09T21:00:00+09:00",
+        "occurred_at_precision": "hour",
+        "payload": { "level": 2, "note": "몸이 무거움" },
+        "confidence": 0.8,
+        "needs_review": false
+      }
+    ],
+    "hypotheses": [
+      {
+        "statement": "생리 시작 며칠 전이라 그런지 계속 예민하고 별것도 아닌데 짜증이 나",
+        "cause_hint": "생리 전(PMS)",
+        "effect_hint": "예민함/짜증"
+      }
+    ],
+    "unparsed": []
+  },
+  "_covers": ["PMS 증상+감정 혼재", "mood 중복 확인", "energy"]
+}

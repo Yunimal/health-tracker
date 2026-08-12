@@ -4,6 +4,7 @@ import { env } from "@/lib/env";
 import { computeConfidence } from "./confidence";
 import { PROMPT_V1 } from "./prompts/v1";
 import { PROMPT_V2 } from "./prompts/v2";
+import { PROMPT_V3 } from "./prompts/v3";
 import type { Category, OccurredAtPrecision } from "@/lib/db/schema";
 
 /**
@@ -16,7 +17,7 @@ import type { Category, OccurredAtPrecision } from "@/lib/db/schema";
 export const PARSE_MODEL = "claude-opus-4-8";
 
 /** 프롬프트 파일명과 동기화한다. 프롬프트를 고치면 prompts/vN.ts 를 새로 만들고 이 값을 올린다. */
-export const PARSE_VERSION = "v2";
+export const PARSE_VERSION = "v3";
 
 const MAX_TOKENS = 4096;
 
@@ -54,6 +55,31 @@ const energyPayloadSchema = z.object({
   note: z.string().nullable(),
 });
 
+const menstrualPayloadSchema = z.object({
+  kind: z.enum(["start", "end", "ongoing"]),
+  cycle_day: z.number().int().nullable(),
+  flow: z.enum(["spotting", "light", "normal", "heavy"]).nullable(),
+  pain: z.number().int().min(1).max(5).nullable(),
+  note: z.string().nullable(),
+});
+
+const bowelPayloadSchema = z.object({
+  bristol: z.number().int().min(1).max(7).nullable(),
+  count: z.number().int().nullable(),
+  note: z.string().nullable(),
+});
+
+const medicationPayloadSchema = z.object({
+  kind: z.enum(["taken", "skipped", "dose_change"]),
+  name: z.string(),
+  dose_text: z.string().nullable(),
+  dose_value: z.number().nullable(),
+  dose_unit: z.string().nullable(),
+  dose_from: z.string().nullable(),
+  dose_to: z.string().nullable(),
+  note: z.string().nullable(),
+});
+
 const eventBase = {
   occurred_at: z.string(),
   occurred_at_precision: precisionSchema,
@@ -65,6 +91,9 @@ const llmEventSchema = z.discriminatedUnion("category", [
   z.object({ category: z.literal("mood"), payload: moodPayloadSchema, ...eventBase }),
   z.object({ category: z.literal("sleep"), payload: sleepPayloadSchema, ...eventBase }),
   z.object({ category: z.literal("energy"), payload: energyPayloadSchema, ...eventBase }),
+  z.object({ category: z.literal("menstrual"), payload: menstrualPayloadSchema, ...eventBase }),
+  z.object({ category: z.literal("bowel"), payload: bowelPayloadSchema, ...eventBase }),
+  z.object({ category: z.literal("medication"), payload: medicationPayloadSchema, ...eventBase }),
 ]);
 
 const hypothesisSchema = z.object({
@@ -107,7 +136,7 @@ export class ParseError extends Error {
 // ── 구현 ─────────────────────────────────────────────────────────────────────
 // 버전별 프롬프트 레지스트리. 프롬프트는 문자열 상수라 번들에 항상 포함된다(fs 접근 없음).
 // 새 버전은 prompts/vN.ts 를 만들어 여기에 등록하고 PARSE_VERSION 을 올린다.
-const PROMPTS: Record<string, string> = { v1: PROMPT_V1, v2: PROMPT_V2 };
+const PROMPTS: Record<string, string> = { v1: PROMPT_V1, v2: PROMPT_V2, v3: PROMPT_V3 };
 
 function loadSystemPrompt(version: string): string {
   const prompt = PROMPTS[version];

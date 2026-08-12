@@ -35,3 +35,8 @@
 각 파일은 `input`(transcript + recorded_at)과 커버 항목 메모(`_covers`)만 채워져 있고
 `expected` 는 비어 있다. 발화별 "뽑혀야 할 것" 초안은 [`DRAFT.md`](./DRAFT.md) 에 있으며,
 확정 후 각 파일의 `expected` 를 채운다. (STEP 3)
+
+`case-011` ~ `case-018` 은 카테고리 확장(**menstrual / bowel / medication**)을 위한
+케이스다(생리 시작·종료·PMS·생리통 / 배변 / 약 복용·잊음·용량변경 / 새+기존 혼재).
+초안은 [`DRAFT2.md`](./DRAFT2.md) 에 있다. 새 카테고리의 규칙·payload 스키마는 아직 확정
+전이라 `expected` 는 비어 있고, RULES 확정 후 채운다.

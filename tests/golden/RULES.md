@@ -88,8 +88,13 @@ Phase 2 에서 appetite 카테고리를 추가할 1순위 후보이므로 unpars
 
 날짜는 발화의 상대 표현("어제","지난 주말")을 recorded_at 기준으로 계산한다.
 
-sleep 카테고리에서 날짜 단서만 있고 시간대 키워드(밤/새벽 등)가 없으면
-→ 해당 날짜 23:00, precision part_of_day. (예: "어제 잠을 설쳤어" → 어제 23:00)
+날짜 단서만 있고 시간대 키워드가 없을 때:
+- sleep 카테고리 → 해당 날짜 23:00, precision "part_of_day" (기존 유지)
+- 그 외 카테고리 → 해당 날짜 12:00, precision "date"
+
+정오로 두는 이유: date precision 은 "그 날짜 어딘가"를 뜻하는데
+00:00 은 전날과 경계가 맞닿아 시간대 변환 한 시간 오차로도
+날짜가 넘어간다. 정오는 양쪽으로 12시간 여유가 있다.
 
 ### confidence 계산식
 
@@ -100,6 +105,7 @@ sleep 카테고리에서 날짜 단서만 있고 시간대 키워드(밤/새벽 
   (결식에는 "양" 개념이 없으므로 되물을 수 없다)
 - 시각이 추정임 (precision 이 exact 가 아님) : -0.20
 - 범위 표현을 최솟값으로 취함 (R7) : -0.20
+- 확신 없는 어조 (R17) : -0.20
 
 결과가 0.70 미만이면 needs_review = true.
 손으로 어림잡지 말고 반드시 이 식으로 계산한다.
@@ -153,6 +159,70 @@ name 에 끼니 이름("아침","점심")을 넣지 않는다 — meal_type 과 
 요리의 구성요소면 유지한다.
 예) "토스트에 계란 하나" → 2건 / "잔치국수 한 그릇" → 1건
 
+## R14. menstrual — 관찰된 주기 사실만 기록한다
+
+payload:
+  kind: "start" | "end" | "ongoing"   (필수)
+  cycle_day: 정수 또는 null            ("이틀째" → 2)
+  flow: "spotting" | "light" | "normal" | "heavy" | null
+  pain: 1~5 또는 null                  (1 없음 ~ 5 매우 심함)
+  note: 문자열 또는 null
+
+- 예측·추정("생리 며칠 전", "곧 할 것 같아")은 이벤트로 만들지 않는다.
+  주기 위치는 start 이벤트에서 계산하는 것이 정확하다.
+  추정 내용은 hypothesis 의 statement 에 보존된다.
+- PMS 로 인한 감정·기력은 menstrual 이 아니라 mood / energy 로 간다.
+  menstrual 에 중복 생성하지 않는다. (R4 와 동일 원칙)
+- 생리통은 menstrual 의 pain 필드로 기록한다.
+- 통증 수치화: 언급만 1~2 / "좀 아파" 2 / "아파" 3 / "심해" 4 / "너무 심해" 5
+- kind 가 "start" 이면 cycle_day 를 1 로 채운다. (시작일이 1일차라는 정의)
+- kind 가 "ongoing" 이면 발화에 명시된 경우에만 채우고, 아니면 null.
+  직전 start 이벤트에서 역산하지 않는다 — 주기 계산은 조회 시점의 일이다.
+- pain 은 별도 이벤트로 만들지 않고 같은 menstrual 이벤트의 필드로 넣는다.
+  생리통은 주기 상태의 속성이지 독립된 사건이 아니다.
+
+## R15. bowel — 배변 활동
+
+payload:
+  bristol: 1~7 또는 null
+  count: 정수 또는 null
+  note: 문자열 또는 null
+
+- "화장실" 언급만으로는 이벤트를 만들지 않는다 (소변일 수 있다).
+  배변을 명시했거나 형태·상태 묘사가 있을 때만 만든다.
+- 브리스톨 매핑:
+  토끼똥·염소똥 1 / 딱딱함 2 / 약간 딱딱 3 / 보통·정상·괜찮음 4 /
+  무름 5 / 묽음 6 / 물설사 7
+  형태 묘사가 전혀 없으면 null.
+- 소화불량·더부룩·복부팽만은 bowel 이 아니다 → unparsed.
+  (배변 활동이 아니라 소화 증상이다. 잦으면 나중에 digestion 카테고리를 만든다)
+
+## R16. medication — 약·영양제
+
+payload:
+  kind: "taken" | "skipped" | "dose_change"   (필수)
+  name: 문자열 (필수)
+  dose_text: 원문 표현 또는 null      ("한 알", "반 알")
+  dose_value: 숫자 또는 null
+  dose_unit: 문자열 또는 null          ("알", "mg")
+  dose_from / dose_to: dose_change 일 때만, 아니면 null
+  note: 문자열 또는 null
+
+- 여러 약이 언급되면 각각 별도 이벤트 (R13 과 동일 원칙)
+- 복용을 잊은 것도 기록한다 → kind: "skipped" (결식과 동일한 취급)
+- 용량 변경 선언은 kind: "dose_change" 로 별도 기록한다.
+  복용 이벤트로 만들지 않는다 — 실제로 먹지 않은 날까지
+  복용한 것으로 집계되기 때문이다.
+- dose 미언급은 confidence 를 깎지 않는다.
+  상비 복용은 용량이 고정이라 매번 말하지 않는 것이 정상이고,
+  되물어도 새 정보가 나오지 않는다. (R6 의 amount 페널티와 다른 이유)
+
+## R17. 불확실한 어조
+
+"~것 같아", "~인 듯", "아마" 처럼 사실 자체에 확신이 없는 표현은
+hypothesis 가 아니라 fact 로 기록하되 confidence 에서 -0.20 한다.
+R1 은 인과 주장에만 적용된다. 사실에 대한 불확신은 인과가 아니다.
+
 ======================= 케이스별 확정 =======================
 
 | case | 항목 | 확정 |
@@ -174,15 +244,32 @@ name 에 끼니 이름("아침","점심")을 넣지 않는다 — meal_type 과 
 | 010 | "12시 좀 넘어" | bedtime 00:00, precision hour |
 | 010 | "두어 번" | interruptions 2 (R7) |
 | 010 | "푹 잔 느낌 아님" | quality 2 (R8) |
+| 011 | 생리 시작 | menstrual(start, flow=light). "양은 적어" → light |
+| 012 | 생리 종료 | menstrual(end), occurred_at 은 어제. R17 적용 → confidence -0.20 |
+| 013 | PMS+감정 | mood(예민·짜증) + energy(몸 무거움) + hypothesis(생리 전 → 예민). menstrual 이벤트 없음 (R14) |
+| 014 | 생리통+진통제 | menstrual(ongoing, pain=4) + medication(taken, 진통제, 한 알). "심해서 진통제" 결과가 행동 → hypothesis 아님 (R1) |
+| 015 | 배변 2건 | 오늘(bristol 4) + 어제(bristol 2) |
+| 016 | 약 3건 | 유산균(taken) + 비타민D(taken) + 오메가3(skipped) |
+| 017 | 약 용량 변경 | medication(dose_change, 갑상선약, dose_from="반 알", dose_to="한 알") |
+| 018 | 혼재 | food(김치찌개) + menstrual(ongoing, cycle_day=2) + medication(taken, 유산균) + energy(피곤). "더부룩" → unparsed (R15) |
 
 ======================= RULES.md 내용 끝 =======================
 
 ## 미해결
 
-현재 없음. 직전 Q1~Q5 는 아래와 같이 해소되어 규칙에 반영됨.
+직전 Q1~Q5 는 규칙에 반영되어 해소됨:
 
 - Q1 (결식 payload) → **R11** 신설. name/name_raw 포함 전부 null, 끼니는 meal_type 만.
 - Q2 (양 미언급 food/drink 페널티) → 유지. **R5** 에 사유 추가, **R6** 에 kind 조건 명시.
 - Q3 (카테고리 밖 원인 보존) → **R2** 에 unparsed 별도 보존 명시.
 - Q4 (카테고리 밖 hypothesis) → **R1** 에 생성한다고 명시. case-005 hypothesis 추가.
 - Q5 (시간대 없는 sleep) → **R6** 에 "날짜만 있으면 23:00 part_of_day" 명문화.
+
+Q6~Q8 도 규칙에 반영되어 해소됨:
+
+- Q6 (날짜만 있는 비-sleep occurred_at) → **R6** 에 "그 외 카테고리 → 해당 날짜 12:00,
+  precision date" 명문화. case-012 / 015#2 / 017 을 12:00 date 로 수정.
+- Q7 (case-018 아랫배 통증) → **R14** 에 "pain 은 별도 이벤트 아니라 같은 menstrual
+  이벤트 필드" 명시. 018 은 pain=3, cycle_day=2 유지.
+- Q8 (menstrual start cycle_day) → **R14** 에 "start 이면 cycle_day 1" 명문화.
+  case-011 을 cycle_day 1 로 수정.

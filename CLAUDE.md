@@ -9,6 +9,9 @@
 
 1. **`raw_entries.transcript` 는 절대 UPDATE/DELETE 하지 않는다.** 원문은 불변이며
    영구 보존한다. 파싱이 틀렸어도 원문은 그대로 두고 파생 데이터만 다시 만든다.
+   - `raw_entries_prevent_mutation()` 함수는 0002 에서 정의되고 0004 에서 create or replace 로
+     교체됐다. 현재 허용 컬럼 목록을 확인하려면 가장 최근 마이그레이션을 봐야 한다. 앞으로
+     이 함수를 또 바꾸면 이 줄의 파일 번호도 갱신할 것.
 2. **파싱 결과(`events`, `hypotheses`)는 언제든 삭제하고 재생성 가능한 파생 데이터다.**
    재파싱은 기존 파생 데이터를 지우고 다시 INSERT 하는 방식으로 한다.
 3. **LLM 이 수치를 추론해서 지어내지 않는다. 모르면 `null`.** "세 모금"을 90ml 로
@@ -49,15 +52,16 @@ src/app/api/parse/route.ts     파싱 트리거 (raw_entry → events/hypotheses
 src/lib/db/                    Supabase 클라이언트 + DB 행 타입
 src/lib/parser/                LLM 파싱 로직 + confidence 계산(R6)
 src/lib/parser/prompts/vN.ts   버전별 프롬프트 원본(문자열 상수). vN.md 는 참조용 사본
-supabase/migrations/           DB 스키마 (0001 스키마 · 0002 원문불변 트리거 · 0003 unparsed)
+supabase/migrations/           DB 스키마 (0001 스키마 · 0002 원문불변 트리거 · 0003 unparsed ·
+                               0004 hidden_at · 0005 카테고리 확장)
 tests/golden/                  골든 테스트셋 (case-*.json + 러너)
 ```
 
 ## 데이터 모델 요약 (상세는 기획서 §5)
 
 - `raw_entries` — 원문. 불변.
-- `events` — 파싱된 사실. 카테고리는 `food | mood | sleep | energy` 4개로 한정.
-  카테고리별 payload 스키마는 기획서 §5.3.
+- `events` — 파싱된 사실. 카테고리는 `food | mood | sleep | energy | menstrual | bowel |
+  medication` 7개 (0005 로 확장). payload 스키마는 기획서 §5.3 및 RULES R11/R14~R16.
 - `hypotheses` — 사용자가 스스로 던진 추측. `status: open|supported|not_supported|dismissed`.
 - `unparsed_fragments` — 4개 카테고리로 못 담은 건강 신호 원문. events 와 같은 생명주기의
   파생 데이터(재파싱 시 삭제·재생성). Phase 2 재파싱 재료.
@@ -66,7 +70,8 @@ tests/golden/                  골든 테스트셋 (case-*.json + 러너)
 
 - **인증 없음.** 단일 사용자. `USER_ID` 환경 변수의 고정 UUID 로 모든 레코드를 귀속시킨다.
 - UI 컴포넌트, 파싱 로직 구현, 인증/로그인은 아직 만들지 않는다 (각 STEP 에서).
-- 항목은 4개(food/mood/sleep/energy)로 한정한다. 나머지는 Phase 2 이후.
+- 항목은 초기 4개(food/mood/sleep/energy)에서 시작해 menstrual/bowel/medication 를
+  추가(0005). 나머지(몸무게·혈압·혈당 등)는 이후 단계.
 
 ## 명령어
 

@@ -1,0 +1,65 @@
+{
+  "input": {
+    "transcript": "아침에 유산균이랑 비타민D 챙겨 먹었는데, 오메가3는 또 깜빡했네.",
+    "recorded_at": "2026-08-12T08:00:00+09:00",
+    "dictionary": {}
+  },
+  "expected": {
+    "events": [
+      {
+        "category": "medication",
+        "occurred_at": "2026-08-12T08:00:00+09:00",
+        "occurred_at_precision": "part_of_day",
+        "payload": {
+          "kind": "taken",
+          "name": "유산균",
+          "dose_text": null,
+          "dose_value": null,
+          "dose_unit": null,
+          "dose_from": null,
+          "dose_to": null,
+          "note": null
+        },
+        "confidence": 0.8,
+        "needs_review": false
+      },
+      {
+        "category": "medication",
+        "occurred_at": "2026-08-12T08:00:00+09:00",
+        "occurred_at_precision": "part_of_day",
+        "payload": {
+          "kind": "taken",
+          "name": "비타민D",
+          "dose_text": null,
+          "dose_value": null,
+          "dose_unit": null,
+          "dose_from": null,
+          "dose_to": null,
+          "note": null
+        },
+        "confidence": 0.8,
+        "needs_review": false
+      },
+      {
+        "category": "medication",
+        "occurred_at": "2026-08-12T08:00:00+09:00",
+        "occurred_at_precision": "part_of_day",
+        "payload": {
+          "kind": "skipped",
+          "name": "오메가3",
+          "dose_text": null,
+          "dose_value": null,
+          "dose_unit": null,
+          "dose_from": null,
+          "dose_to": null,
+          "note": "깜빡함"
+        },
+        "confidence": 0.8,
+        "needs_review": false
+      }
+    ],
+    "hypotheses": [],
+    "unparsed": []
+  },
+  "_covers": ["medication 복용", "medication 복용 잊음"]
+}

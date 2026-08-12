@@ -7,7 +7,15 @@ import { CATEGORY_LABEL, formatWhen, summarizePayload } from "@/lib/format";
 import type { Category } from "@/lib/db/schema";
 import type { TimelineEvent } from "@/lib/db/queries";
 
-const CATEGORIES: Category[] = ["food", "mood", "sleep", "energy"];
+const CATEGORIES: Category[] = [
+  "food",
+  "mood",
+  "sleep",
+  "energy",
+  "menstrual",
+  "bowel",
+  "medication",
+];
 
 /** occurred_at(ISO, 대개 UTC) ↔ datetime-local. 입력창은 KST 벽시계로 취급한다. */
 const toLocalInput = (iso: string) =>
@@ -29,6 +37,27 @@ function initFields(category: Category, p: Record<string, unknown>): Fields {
       return { quality: n("quality"), interruptions: n("interruptions") };
     case "energy":
       return { level: n("level"), note: s("note") };
+    case "menstrual":
+      return {
+        kind: s("kind"),
+        cycle_day: n("cycle_day"),
+        flow: s("flow"),
+        pain: n("pain"),
+        note: s("note"),
+      };
+    case "bowel":
+      return { bristol: n("bristol"), count: n("count"), note: s("note") };
+    case "medication":
+      return {
+        kind: s("kind"),
+        name: s("name"),
+        dose_text: s("dose_text"),
+        dose_value: n("dose_value"),
+        dose_unit: s("dose_unit"),
+        dose_from: s("dose_from"),
+        dose_to: s("dose_to"),
+        note: s("note"),
+      };
   }
 }
 
@@ -62,6 +91,34 @@ function buildPayload(
       };
     case "energy":
       return { ...base, level: numOrNull(f.level!) ?? 3, note: strOrNull(f.note!) };
+    case "menstrual":
+      return {
+        ...base,
+        kind: f.kind || "ongoing",
+        cycle_day: numOrNull(f.cycle_day!),
+        flow: strOrNull(f.flow!),
+        pain: numOrNull(f.pain!),
+        note: strOrNull(f.note!),
+      };
+    case "bowel":
+      return {
+        ...base,
+        bristol: numOrNull(f.bristol!),
+        count: numOrNull(f.count!),
+        note: strOrNull(f.note!),
+      };
+    case "medication":
+      return {
+        ...base,
+        kind: f.kind || "taken",
+        name: f.name ?? "",
+        dose_text: strOrNull(f.dose_text!),
+        dose_value: numOrNull(f.dose_value!),
+        dose_unit: strOrNull(f.dose_unit!),
+        dose_from: strOrNull(f.dose_from!),
+        dose_to: strOrNull(f.dose_to!),
+        note: strOrNull(f.note!),
+      };
   }
 }
 

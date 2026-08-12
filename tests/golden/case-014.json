@@ -1,0 +1,45 @@
+{
+  "input": {
+    "transcript": "아침부터 생리통이 심해서 진통제 한 알 먹었어.",
+    "recorded_at": "2026-08-12T08:30:00+09:00",
+    "dictionary": {}
+  },
+  "expected": {
+    "events": [
+      {
+        "category": "menstrual",
+        "occurred_at": "2026-08-12T08:00:00+09:00",
+        "occurred_at_precision": "part_of_day",
+        "payload": {
+          "kind": "ongoing",
+          "cycle_day": null,
+          "flow": null,
+          "pain": 4,
+          "note": "생리통 심함"
+        },
+        "confidence": 0.8,
+        "needs_review": false
+      },
+      {
+        "category": "medication",
+        "occurred_at": "2026-08-12T08:30:00+09:00",
+        "occurred_at_precision": "hour",
+        "payload": {
+          "kind": "taken",
+          "name": "진통제",
+          "dose_text": "한 알",
+          "dose_value": 1,
+          "dose_unit": "알",
+          "dose_from": null,
+          "dose_to": null,
+          "note": null
+        },
+        "confidence": 0.8,
+        "needs_review": false
+      }
+    ],
+    "hypotheses": [],
+    "unparsed": []
+  },
+  "_covers": ["menstrual 생리통", "medication 복용", "새 카테고리 혼재"]
+}

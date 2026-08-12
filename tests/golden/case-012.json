@@ -1,0 +1,28 @@
+{
+  "input": {
+    "transcript": "생리는 어제 끝난 것 같아. 오늘은 거의 안 묻어나네.",
+    "recorded_at": "2026-08-16T10:00:00+09:00",
+    "dictionary": {}
+  },
+  "expected": {
+    "events": [
+      {
+        "category": "menstrual",
+        "occurred_at": "2026-08-15T12:00:00+09:00",
+        "occurred_at_precision": "date",
+        "payload": {
+          "kind": "end",
+          "cycle_day": null,
+          "flow": null,
+          "pain": null,
+          "note": null
+        },
+        "confidence": 0.6,
+        "needs_review": true
+      }
+    ],
+    "hypotheses": [],
+    "unparsed": []
+  },
+  "_covers": ["menstrual 종료"]
+}

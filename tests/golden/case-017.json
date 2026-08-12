@@ -1,0 +1,31 @@
+{
+  "input": {
+    "transcript": "어제부터 갑상선약을 반 알에서 한 알로 늘렸어.",
+    "recorded_at": "2026-08-12T20:00:00+09:00",
+    "dictionary": {}
+  },
+  "expected": {
+    "events": [
+      {
+        "category": "medication",
+        "occurred_at": "2026-08-11T12:00:00+09:00",
+        "occurred_at_precision": "date",
+        "payload": {
+          "kind": "dose_change",
+          "name": "갑상선약",
+          "dose_text": null,
+          "dose_value": null,
+          "dose_unit": null,
+          "dose_from": "반 알",
+          "dose_to": "한 알",
+          "note": null
+        },
+        "confidence": 0.8,
+        "needs_review": false
+      }
+    ],
+    "hypotheses": [],
+    "unparsed": []
+  },
+  "_covers": ["medication 용량 변경"]
+}
