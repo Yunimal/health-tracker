@@ -1,15 +1,21 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-// DB 와 env 는 실제로 붙이지 않고 mock 한다.
+// DB · env · 인증은 실제로 붙이지 않고 mock 한다.
 vi.mock("@/lib/db/client", () => ({ getSupabaseClient: vi.fn() }));
 vi.mock("@/lib/env", () => ({
   env: {
-    userId: () => "user-123",
     supabaseUrl: () => "http://mock",
     supabaseServiceRoleKey: () => "mock-key",
     anthropicApiKey: () => "mock-anthropic",
-    ingestToken: () => "test-token",
+    parseModel: () => "claude-sonnet-5",
   },
+}));
+// 토큰 → 사용자 해석을 mock. "test-token" 만 user-123 으로 매칭, 나머지는 null(→ 401).
+vi.mock("@/lib/auth", () => ({
+  userFromRequest: vi.fn(async (req: Request) => {
+    const m = (req.headers.get("authorization") ?? "").match(/^Bearer\s+(.+)$/i);
+    return m && m[1] === "test-token" ? { id: "user-123", label: "나" } : null;
+  }),
 }));
 // next/server 의 after 만 no-op 스파이로 대체(백그라운드 파싱이 실제로 돌지 않도록).
 // NextResponse 는 실제 구현을 유지한다.
@@ -81,7 +87,7 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
-describe("인증 (Authorization: Bearer INGEST_TOKEN)", () => {
+describe("인증 (Authorization: Bearer <app_users.ingest_token>)", () => {
   it("POST: 토큰이 없으면 401 이고 INSERT 하지 않는다", async () => {
     const mock = useSupabase({ data: null, error: null });
     const res = await POST(postReq({ transcript: "밥", source: "voice" }, { auth: null }));

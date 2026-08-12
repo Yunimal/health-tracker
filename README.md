@@ -33,13 +33,16 @@ pnpm install
 cp .env.example .env.local
 ```
 
-| 변수                        | 설명                                                        |
-| --------------------------- | ----------------------------------------------------------- |
-| `SUPABASE_URL`              | Supabase 프로젝트 URL                                       |
-| `SUPABASE_SERVICE_ROLE_KEY` | 서버 전용 service role key (RLS 우회, 절대 노출 금지)       |
-| `ANTHROPIC_API_KEY`         | Claude API 키                                               |
-| `USER_ID`                   | Phase 0 단일 사용자 UUID (인증 없음)                        |
-| `INGEST_TOKEN`              | `/api/entries` 수신 인증 토큰 (iOS 단축어가 Bearer 로 전송) |
+| 변수                        | 설명                                                  |
+| --------------------------- | ----------------------------------------------------- |
+| `SUPABASE_URL`              | Supabase 프로젝트 URL                                 |
+| `SUPABASE_SERVICE_ROLE_KEY` | 서버 전용 service role key (RLS 우회, 절대 노출 금지) |
+| `ANTHROPIC_API_KEY`         | Claude API 키                                         |
+| `PARSE_MODEL` (선택)        | 파싱 모델. 미설정 시 `claude-sonnet-5`                |
+
+> 사용자 식별은 환경 변수가 아니라 `app_users.ingest_token`(DB) 으로 한다. 각 구성원의
+> 토큰은 `app_users` 행에 저장한다(0006 마이그레이션). `USER_ID` / `INGEST_TOKEN` 환경
+> 변수는 폐기됐다. ⚠️ 토큰을 아는 사람은 그 사용자의 기록을 볼 수 있다 — 가족끼리만 공유.
 
 iOS 단축어(음성 입력) 연동은 [`docs/shortcut-setup.md`](./docs/shortcut-setup.md) 참고.
 

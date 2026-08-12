@@ -1,15 +1,17 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import { getSupabaseClient } from "@/lib/db/client";
-import { env } from "@/lib/env";
+import { AUTH_COOKIE, currentWebUser, resolveUserByToken } from "@/lib/auth";
 import { reparseEntry } from "@/lib/parser/persist";
 import type { Category, RawEntry } from "@/lib/db/schema";
 
 /**
  * 타임라인 웹의 서버 액션. 브라우저는 이 함수들만 호출한다.
- * 모든 비밀(service role key 등)은 서버에만 있고, INGEST_TOKEN 은 여기서 쓰지 않는다
- * (웹은 서버에서 DB 에 직접 접근하므로 클라이언트 번들에 어떤 토큰도 들어가지 않는다).
+ * 사용자는 httpOnly 쿠키의 토큰으로 판별한다(@/lib/auth). 클라이언트 번들엔 토큰이 안 들어간다.
+ * ⚠️ 진짜 보안 경계가 아니다 — 가족 3명 + 전원 동의 전제. (CLAUDE.md 참고)
  */
 
 export interface ActionResult {
@@ -22,11 +24,38 @@ function kstNowIso(): string {
   return new Date(kstMs).toISOString().replace("Z", "+09:00");
 }
 
+// ── 로그인 / 로그아웃 ─────────────────────────────────────────────────────────
+/** 토큰을 검증하고 httpOnly 쿠키에 저장한다. 유효하지 않으면 저장하지 않는다. */
+export async function login(token: string): Promise<ActionResult> {
+  const t = token.trim();
+  if (!t) return { ok: false, error: "토큰을 입력하세요" };
+  const user = await resolveUserByToken(t);
+  if (!user) return { ok: false, error: "토큰이 올바르지 않습니다" };
+
+  const store = await cookies();
+  store.set(AUTH_COOKIE, t, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 400, // ~400일
+  });
+  return { ok: true };
+}
+
+export async function logout(): Promise<void> {
+  const store = await cookies();
+  store.delete(AUTH_COOKIE);
+  redirect("/login");
+}
+
 /** 텍스트 원문을 저장하고(파싱 대조를 즉시 보려고) 파싱까지 마친 뒤 목록을 갱신한다. */
 export async function createTextEntry(text: string): Promise<ActionResult> {
   if (text.trim().length === 0) return { ok: false, error: "빈 입력" };
   const supabase = getSupabaseClient();
-  const userId = env.userId();
+  const user = await currentWebUser();
+  if (!user) return { ok: false, error: "로그인이 필요합니다" };
+  const userId = user.id;
 
   const { data, error } = await supabase
     .from("raw_entries")
@@ -45,7 +74,9 @@ export async function createTextEntry(text: string): Promise<ActionResult> {
 /** 원문 1건을 다시 파싱한다(POST /api/parse 단건과 동일 경로). */
 export async function reparseEntryById(rawEntryId: string): Promise<ActionResult> {
   const supabase = getSupabaseClient();
-  const userId = env.userId();
+  const user = await currentWebUser();
+  if (!user) return { ok: false, error: "로그인이 필요합니다" };
+  const userId = user.id;
   const { data, error } = await supabase
     .from("raw_entries")
     .select("*")
@@ -68,7 +99,9 @@ export interface EventEdit {
 /** 이벤트를 교정한다. 저장 시 corrected_by_user = true. (transcript 는 건드리지 않는다) */
 export async function updateEvent(edit: EventEdit): Promise<ActionResult> {
   const supabase = getSupabaseClient();
-  const userId = env.userId();
+  const user = await currentWebUser();
+  if (!user) return { ok: false, error: "로그인이 필요합니다" };
+  const userId = user.id;
   const { error } = await supabase
     .from("events")
     .update({
@@ -87,7 +120,9 @@ export async function updateEvent(edit: EventEdit): Promise<ActionResult> {
 /** 이벤트 삭제. (파생 데이터이므로 자유롭게 삭제 가능) */
 export async function deleteEvent(eventId: string): Promise<ActionResult> {
   const supabase = getSupabaseClient();
-  const userId = env.userId();
+  const user = await currentWebUser();
+  if (!user) return { ok: false, error: "로그인이 필요합니다" };
+  const userId = user.id;
   const { error } = await supabase.from("events").delete().eq("id", eventId).eq("user_id", userId);
   if (error) return { ok: false, error: error.message };
   revalidatePath("/");
@@ -101,7 +136,9 @@ export async function deleteEvent(eventId: string): Promise<ActionResult> {
  */
 export async function hideEntry(rawEntryId: string): Promise<ActionResult> {
   const supabase = getSupabaseClient();
-  const userId = env.userId();
+  const user = await currentWebUser();
+  if (!user) return { ok: false, error: "로그인이 필요합니다" };
+  const userId = user.id;
   const { error } = await supabase
     .from("raw_entries")
     .update({ hidden_at: new Date().toISOString() })
@@ -114,7 +151,9 @@ export async function hideEntry(rawEntryId: string): Promise<ActionResult> {
 
 export async function unhideEntry(rawEntryId: string): Promise<ActionResult> {
   const supabase = getSupabaseClient();
-  const userId = env.userId();
+  const user = await currentWebUser();
+  if (!user) return { ok: false, error: "로그인이 필요합니다" };
+  const userId = user.id;
   const { error } = await supabase
     .from("raw_entries")
     .update({ hidden_at: null })

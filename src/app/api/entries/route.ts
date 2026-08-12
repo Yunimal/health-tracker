@@ -1,7 +1,7 @@
 import { NextResponse, after } from "next/server";
 import { z } from "zod";
 import { getSupabaseClient } from "@/lib/db/client";
-import { env } from "@/lib/env";
+import { userFromRequest } from "@/lib/auth";
 import { reparseEntry } from "@/lib/parser/persist";
 import { excludeHidden } from "@/lib/db/filters";
 import type { RawEntry, RawEntryInsert } from "@/lib/db/schema";
@@ -9,29 +9,10 @@ import type { RawEntry, RawEntryInsert } from "@/lib/db/schema";
 /**
  * /api/entries — 원문 수신/조회 엔드포인트. (기획서 §7)
  *
- * 인증: Authorization: Bearer {INGEST_TOKEN}. 없거나 틀리면 401. (POST/GET 공통)
+ * 인증: Authorization: Bearer <app_users.ingest_token>. 토큰으로 사용자를 식별한다.
+ *       없거나 매칭 안 되면 401. (POST/GET 공통, @/lib/auth)
  * 원칙: transcript(원문)는 저장 후 절대 UPDATE/DELETE 하지 않는다. (기획서 §5.1)
  */
-
-// ── 인증 ─────────────────────────────────────────────────────────────────────
-/** 길이 노출을 제외하고 타이밍에 무관한 문자열 비교. */
-function safeEqual(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
-  let mismatch = 0;
-  for (let i = 0; i < a.length; i++) mismatch |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  return mismatch === 0;
-}
-
-/** Bearer 토큰이 INGEST_TOKEN 과 일치하지 않으면 401 응답을, 통과면 null 을 반환한다. */
-function requireIngestToken(request: Request): NextResponse | null {
-  const header = request.headers.get("authorization") ?? "";
-  const match = header.match(/^Bearer\s+(.+)$/i);
-  const token = match?.[1];
-  if (!token || !safeEqual(token, env.ingestToken())) {
-    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  }
-  return null;
-}
 
 // ── POST: 원문 수신 ─────────────────────────────────────────────────────────
 const PostBody = z.object({
@@ -50,8 +31,8 @@ function kstNowIso(): string {
 }
 
 export async function POST(request: Request): Promise<NextResponse> {
-  const authError = requireIngestToken(request);
-  if (authError) return authError;
+  const user = await userFromRequest(request);
+  if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   let raw: unknown;
   try {
@@ -69,7 +50,7 @@ export async function POST(request: Request): Promise<NextResponse> {
   }
 
   const insert: RawEntryInsert = {
-    user_id: env.userId(),
+    user_id: user.id,
     transcript: parsed.data.transcript,
     source: parsed.data.source,
     recorded_at: parsed.data.recorded_at ?? kstNowIso(),
@@ -89,7 +70,7 @@ export async function POST(request: Request): Promise<NextResponse> {
   try {
     after(async () => {
       try {
-        await reparseEntry(getSupabaseClient(), env.userId(), entry);
+        await reparseEntry(getSupabaseClient(), user.id, entry);
       } catch (err) {
         console.error(`[entries] 백그라운드 파싱 실패 (raw_entry ${entry.id}):`, err);
       }
@@ -108,8 +89,8 @@ const DateQuery = z.object({
 });
 
 export async function GET(request: Request): Promise<NextResponse> {
-  const authError = requireIngestToken(request);
-  if (authError) return authError;
+  const user = await userFromRequest(request);
+  if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
   const url = new URL(request.url);
   const parsed = DateQuery.safeParse({ date: url.searchParams.get("date") });
@@ -133,7 +114,7 @@ export async function GET(request: Request): Promise<NextResponse> {
     supabase
       .from("raw_entries")
       .select("*")
-      .eq("user_id", env.userId())
+      .eq("user_id", user.id)
       .gte("recorded_at", dayStart.toISOString())
       .lt("recorded_at", dayEnd.toISOString()),
   );

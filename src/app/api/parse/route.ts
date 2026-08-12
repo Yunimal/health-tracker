@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getSupabaseClient } from "@/lib/db/client";
-import { env } from "@/lib/env";
+import { userFromRequest } from "@/lib/auth";
 import { reparseEntry, type EntryOutcome } from "@/lib/parser/persist";
 import type { RawEntry } from "@/lib/db/schema";
 
 /**
  * POST /api/parse — 파싱 트리거 (수동/배치 재파싱).
  *
+ * 인증: Authorization: Bearer <app_users.ingest_token>. 자기 원문만 재파싱한다.
  * body: { raw_entry_id } (단건) 또는 { batch: true, since? } (배치 재파싱)
  * 재파싱 규칙과 파생 데이터 생명주기는 reparseEntry(@/lib/parser/persist) 참고.
  */
@@ -17,6 +18,9 @@ const Body = z.union([
 ]);
 
 export async function POST(request: Request): Promise<NextResponse> {
+  const user = await userFromRequest(request);
+  if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+
   let body: unknown;
   try {
     body = await request.json();
@@ -33,7 +37,7 @@ export async function POST(request: Request): Promise<NextResponse> {
   }
 
   const supabase = getSupabaseClient();
-  const userId = env.userId();
+  const userId = user.id;
 
   // ── 단건 ────────────────────────────────────────────────────────────────
   if ("raw_entry_id" in parsed.data) {

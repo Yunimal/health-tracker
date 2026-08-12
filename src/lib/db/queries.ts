@@ -1,6 +1,5 @@
 import "server-only";
 import { getSupabaseClient } from "@/lib/db/client";
-import { env } from "@/lib/env";
 import { excludeHidden } from "@/lib/db/filters";
 import type { Category, Hypothesis, RawEntry, UnparsedFragment } from "@/lib/db/schema";
 
@@ -52,9 +51,12 @@ function groupBy<T>(rows: T[], key: (r: T) => string | null): Map<string, T[]> {
  * events / hypotheses / unparsed_fragments 와 함께 반환한다. (기획서 §4.1)
  * 서버 전용(service role). 브라우저는 이 함수를 직접 호출하지 않는다.
  */
-export async function getDayTimeline(date: string, includeHidden = false): Promise<TimelineData[]> {
+export async function getDayTimeline(
+  userId: string,
+  date: string,
+  includeHidden = false,
+): Promise<TimelineData[]> {
   const supabase = getSupabaseClient();
-  const userId = env.userId();
   const [start, end] = kstDayRange(date);
 
   let entriesQuery = supabase

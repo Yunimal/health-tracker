@@ -56,7 +56,9 @@ src/lib/db/                    Supabase 클라이언트 + DB 행 타입
 src/lib/parser/                LLM 파싱 로직 + confidence 계산(R6)
 src/lib/parser/prompts/vN.ts   버전별 프롬프트 원본(문자열 상수). vN.md 는 참조용 사본
 supabase/migrations/           DB 스키마 (0001 스키마 · 0002 원문불변 트리거 · 0003 unparsed ·
-                               0004 hidden_at · 0005 카테고리 확장)
+                               0004 hidden_at · 0005 카테고리 확장 · 0006 다중 사용자)
+src/lib/auth.ts                토큰 → 사용자 해석 (API: Bearer, 웹: httpOnly 쿠키)
+src/app/login/                 토큰 붙여넣기 로그인 페이지
 tests/golden/                  골든 테스트셋 (case-*.json + 러너)
 ```
 
@@ -64,15 +66,30 @@ tests/golden/                  골든 테스트셋 (case-*.json + 러너)
 
 - `raw_entries` — 원문. 불변.
 - `events` — 파싱된 사실. 카테고리는 `food | mood | sleep | energy | menstrual | bowel |
-  medication` 7개 (0005 로 확장). payload 스키마는 기획서 §5.3 및 RULES R11/R14~R16.
+medication` 7개 (0005 로 확장). payload 스키마는 기획서 §5.3 및 RULES R11/R14~R16.
 - `hypotheses` — 사용자가 스스로 던진 추측. `status: open|supported|not_supported|dismissed`.
 - `unparsed_fragments` — 4개 카테고리로 못 담은 건강 신호 원문. events 와 같은 생명주기의
   파생 데이터(재파싱 시 삭제·재생성). Phase 2 재파싱 재료.
 
+## 다중 사용자 / 보안 (0006 이후)
+
+- **가족 3명 규모.** Supabase Auth 는 도입하지 않는다(과한 구조). 사용자는 `app_users`
+  테이블의 `ingest_token` 으로 식별한다. `USER_ID` / `INGEST_TOKEN` 환경 변수는 폐기.
+- **시드는 마이그레이션에 넣지 않는다.** `0006` 은 테이블+RLS 만 만든다(커밋되는 파일에
+  토큰을 남기지 않으려고). 사용자 행은 SQL Editor 에서 수동 추가 — `docs/multi-user-setup.md`.
+- 인증 경로(@/lib/auth):
+  - API(`/api/entries`, `/api/parse`) — `Authorization: Bearer <ingest_token>`.
+  - 웹(페이지·서버 액션) — httpOnly 쿠키(`ht_token`)의 토큰. `/login` 에서 붙여넣어 저장,
+    로그아웃으로 삭제. 우측 상단에 현재 `label` 표시.
+  - 토큰→사용자 조회는 60초 메모리 캐시(매 요청 DB 조회 방지).
+- ⚠️ **이건 진짜 보안 경계가 아니다.** 토큰을 아는 사람은 그 사용자의 기록을 볼 수 있다.
+  **가족 3명 + 전원 동의**를 전제로만 쓰는 구조다. 타이밍-세이프 비교·레이트리밋·토큰
+  회전 같은 방어는 없다. **외부(비가족) 공개 배포로 확장할 때는 이 모델을 폐기하고
+  실제 인증(Supabase Auth 등)으로 교체해야 한다.**
+
 ## Phase 0 제약
 
-- **인증 없음.** 단일 사용자. `USER_ID` 환경 변수의 고정 UUID 로 모든 레코드를 귀속시킨다.
-- UI 컴포넌트, 파싱 로직 구현, 인증/로그인은 아직 만들지 않는다 (각 STEP 에서).
+- UI 컴포넌트, 파싱 로직 구현은 각 STEP 에서 점진적으로 만든다.
 - 항목은 초기 4개(food/mood/sleep/energy)에서 시작해 menstrual/bowel/medication 를
   추가(0005). 나머지(몸무게·혈압·혈당 등)는 이후 단계.
 

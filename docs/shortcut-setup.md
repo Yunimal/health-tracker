@@ -13,15 +13,16 @@
 
 ## 0. 미리 준비할 값
 
-| 이름               | 설명                                                    |
-| ------------------ | ------------------------------------------------------- |
-| `{{DEPLOY_URL}}`   | **배포된 서버 주소** (예: `https://health.example.com`) |
-| `{{INGEST_TOKEN}}` | 서버의 `INGEST_TOKEN` 환경 변수와 **똑같은** 값         |
+| 이름               | 설명                                                        |
+| ------------------ | ----------------------------------------------------------- |
+| `{{DEPLOY_URL}}`   | **배포된 서버 주소** (예: `https://health.example.com`)     |
+| `{{INGEST_TOKEN}}` | 본인의 `app_users.ingest_token` 값 (DB 에 저장된 개인 토큰) |
 
 > ⚠️ **`localhost` / `127.0.0.1` 는 폰에서 접근 못 한다.** 반드시 인터넷에 배포된
 > HTTPS 주소(`{{DEPLOY_URL}}`)를 넣어야 한다. Vercel 등에 배포한 뒤 그 주소를 쓴다.
-> `{{INGEST_TOKEN}}` 은 `openssl rand -hex 32` 같은 걸로 길게 만들어 서버 환경 변수와
-> 단축어 양쪽에 동일하게 넣는다.
+> `{{INGEST_TOKEN}}` 은 각 구성원마다 다른 개인 토큰이다. `openssl rand -hex 32` 로
+> 만들어 `app_users` 행(본인)에 넣고, 같은 값을 이 단축어에 넣는다. 이 토큰으로 서버가
+> 사용자를 식별한다. ⚠️ 토큰을 아는 사람은 그 사용자의 기록을 볼 수 있으니 공유 금지.
 
 ## 1. 호출할 API
 
@@ -217,7 +218,8 @@ Authorization: Bearer {{INGEST_TOKEN}}
 
 - 헤더 이름이 정확히 `Authorization` 인지 (오타/대소문자 확인 — 값 스킴은 `Bearer`)
 - 값이 `Bearer {{INGEST_TOKEN}}` 형식인지 (**`Bearer` + 공백 1칸 + 토큰**, 앞뒤 공백 금지)
-- 단축어의 토큰과 서버 `INGEST_TOKEN` 환경 변수가 **완전히 동일**한지 (복붙 시 줄바꿈/공백 유입 주의)
+- 단축어의 토큰이 `app_users.ingest_token`(DB) 값과 **완전히 동일**한지 (복붙 시 줄바꿈/공백 유입 주의)
+- 본인 `app_users` 행이 실제로 존재하는지 (0006 마이그레이션 후 토큰을 넣었는지)
 - (C 단축어) GET 에도 Authorization 헤더를 넣었는지
 
 ### `500` / `{"error":"insert_failed", ...}`
@@ -225,8 +227,8 @@ Authorization: Bearer {{INGEST_TOKEN}}
 서버가 원문을 저장하지 못했다. **원문이 저장되지 않았을 수 있으니 다시 시도**하고,
 계속되면 서버 쪽을 확인한다.
 
-- 서버 환경 변수: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `USER_ID` 설정 여부
-- DB 마이그레이션(0001~0003) 적용 여부
+- 서버 환경 변수: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `ANTHROPIC_API_KEY` 설정 여부
+- DB 마이그레이션(0001~0006) 적용 여부 + `app_users` 에 본인 토큰 행 존재 여부
 - 배포 로그의 상세 오류(`detail` 필드)
 
 ### 아무 반응이 없거나 "연결할 수 없음"
