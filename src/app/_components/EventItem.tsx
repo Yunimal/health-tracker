@@ -3,9 +3,40 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { updateEvent, deleteEvent } from "../actions";
-import { CATEGORY_LABEL, formatWhen, summarizePayload } from "@/lib/format";
+import {
+  CATEGORY_LABEL,
+  CATEGORY_ICON,
+  formatWhen,
+  summarizeEvent,
+  reviewReasons,
+} from "@/lib/format";
 import type { Category } from "@/lib/db/schema";
 import type { TimelineEvent } from "@/lib/db/queries";
+
+/** 교정 폼의 필드명을 읽기 쉽게(표시용). 없는 키는 그대로 보여준다. */
+const FIELD_LABEL: Record<string, string> = {
+  name: "이름",
+  amount_text: "양(원문)",
+  amount_value: "양(값)",
+  label: "기분",
+  valence: "긍·부정",
+  arousal: "각성도",
+  quality: "수면 질",
+  interruptions: "깬 횟수",
+  level: "기력",
+  note: "메모",
+  kind: "종류",
+  cycle_day: "주기 일차",
+  flow: "양",
+  pain: "통증",
+  bristol: "형태(브리스톨)",
+  count: "횟수",
+  dose_text: "용량(원문)",
+  dose_value: "용량(값)",
+  dose_unit: "단위",
+  dose_from: "이전 용량",
+  dose_to: "새 용량",
+};
 
 const CATEGORIES: Category[] = [
   "food",
@@ -124,6 +155,7 @@ function buildPayload(
 
 export default function EventItem({ event }: { event: TimelineEvent }) {
   const [editing, setEditing] = useState(false);
+  const [showReason, setShowReason] = useState(false);
   const [category, setCategory] = useState<Category>(event.category);
   const [when, setWhen] = useState(toLocalInput(event.occurred_at));
   const [fields, setFields] = useState<Fields>(() => initFields(event.category, event.payload));
@@ -178,34 +210,55 @@ export default function EventItem({ event }: { event: TimelineEvent }) {
     });
   }
 
-  const border = event.needs_review ? "border-amber-400 bg-amber-50" : "border-gray-200";
-
   if (!editing) {
+    const reasons = event.needs_review ? reviewReasons(event) : [];
+    const border = event.needs_review ? "border-amber-400" : "border-gray-200";
     return (
-      <button
-        onClick={open}
-        className={`flex w-full items-start gap-2 rounded border ${border} px-2 py-1 text-left hover:bg-gray-50`}
-      >
-        <span className="shrink-0 rounded border border-gray-400 px-1 text-[11px] leading-5 text-gray-700">
-          {CATEGORY_LABEL[event.category]}
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="block truncate text-sm">
-            {summarizePayload(event.category, event.payload)}
-          </span>
-          <span className="block text-[11px] text-gray-500">
-            {formatWhen(event.occurred_at, event.occurred_at_precision)} · conf{" "}
-            {Number(event.confidence).toFixed(2)}
-            {event.needs_review && " · 검토"}
-            {event.corrected_by_user && " · 교정됨"}
-          </span>
-        </span>
-      </button>
+      <div className={`rounded border ${border}`}>
+        <div className="flex items-stretch">
+          {/* 한 줄 요약 — 탭하면 상세/교정 UI 가 열린다. */}
+          <button
+            onClick={open}
+            className="flex min-w-0 flex-1 items-start gap-2 rounded-l px-2 py-1.5 text-left hover:bg-gray-50"
+          >
+            <span className="shrink-0 text-sm leading-5" aria-hidden>
+              {CATEGORY_ICON[event.category]}
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm">{summarizeEvent(event.category, event.payload)}</span>
+              <span className="block text-[11px] text-gray-400">
+                {CATEGORY_LABEL[event.category]} ·{" "}
+                {formatWhen(event.occurred_at, event.occurred_at_precision)}
+                {event.corrected_by_user && " · 교정됨"}
+              </span>
+            </span>
+          </button>
+
+          {/* 확인 필요 칩 — 누르면 이유를 펼친다(교정과 별개). */}
+          {event.needs_review && (
+            <button
+              onClick={() => setShowReason((v) => !v)}
+              aria-expanded={showReason}
+              className="m-1 shrink-0 self-start rounded-full border border-amber-400 bg-amber-50 px-2 py-0.5 text-[11px] text-amber-700 hover:bg-amber-100"
+            >
+              확인 필요
+            </button>
+          )}
+        </div>
+
+        {showReason && event.needs_review && (
+          <p className="border-t border-amber-200 bg-amber-50 px-2 py-1 text-[11px] text-amber-700">
+            {reasons.length ? reasons.join(" · ") : "값을 한 번 확인해 주세요"}
+          </p>
+        )}
+      </div>
     );
   }
 
+  const editBorder = event.needs_review ? "border-amber-400 bg-amber-50" : "border-gray-200";
+
   return (
-    <div className={`rounded border ${border} p-2`}>
+    <div className={`rounded border ${editBorder} p-2`}>
       <div className="flex flex-wrap gap-2">
         <select
           value={category}
@@ -229,7 +282,7 @@ export default function EventItem({ event }: { event: TimelineEvent }) {
       <div className="mt-2 grid grid-cols-2 gap-2">
         {Object.keys(fields).map((k) => (
           <label key={k} className="flex flex-col text-[11px] text-gray-600">
-            {k}
+            {FIELD_LABEL[k] ?? k}
             <input
               value={fields[k] ?? ""}
               onChange={(e) => setField(k, e.target.value)}
