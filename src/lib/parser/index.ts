@@ -24,7 +24,9 @@ import type { Category, OccurredAtPrecision } from "@/lib/db/schema";
 /** 프롬프트 파일명과 동기화한다. 프롬프트를 고치면 prompts/vN.ts 를 새로 만들고 이 값을 올린다. */
 export const PARSE_VERSION = "v8";
 
-const MAX_TOKENS = 4096;
+// 출력 한도. 사고(thinking)는 꺼도(아래 callModel) 이벤트가 많은 원문은 4096 을 넘을 수 있어
+// 8192 로 둔다. 출력 토큰은 실제 생성한 만큼만 과금되므로 한도 상향에 비용 부담은 없다.
+const MAX_TOKENS = 8192;
 
 // 실제 Anthropic API 호출 횟수(재시도 포함). 골든 채점에서 호출 수를 콘솔에 찍는다.
 let apiCallCount = 0;
@@ -33,6 +35,17 @@ export function getApiCallCount(): number {
 }
 export function resetApiCallCount(): void {
   apiCallCount = 0;
+}
+
+// 누적 토큰 사용량(모든 호출 합산). 골든 채점에서 평균을 콘솔에 찍는다.
+let totalInputTokens = 0;
+let totalOutputTokens = 0;
+export function getTokenTotals(): { inputTokens: number; outputTokens: number } {
+  return { inputTokens: totalInputTokens, outputTokens: totalOutputTokens };
+}
+export function resetTokenTotals(): void {
+  totalInputTokens = 0;
+  totalOutputTokens = 0;
 }
 
 // ── LLM 출력 스키마 (zod). 범위 제약을 런타임에 강제한다. ────────────────────
@@ -195,16 +208,30 @@ function tryParseJson(text: string): unknown {
   }
 }
 
+/** 모델 호출 결과. text 외에 진단용 메타(stop_reason, 토큰)를 함께 돌려준다. */
+interface ModelCall {
+  text: string;
+  stopReason: string | null;
+  inputTokens: number;
+  outputTokens: number;
+  thinkingTokens: number;
+}
+
 async function callModel(
   client: Anthropic,
   system: string,
   userJson: string,
   cachePrompt: boolean,
-): Promise<string> {
+): Promise<ModelCall> {
   apiCallCount++;
   const msg = await client.messages.create({
     model: env.parseModel(),
     max_tokens: MAX_TOKENS,
+    // 사고(extended thinking)를 명시적으로 끈다. 이 파서는 규칙이 프롬프트에 전부 있고
+    // confidence 는 코드가 계산한다 — 모델의 자체 판단 여지를 없앤 설계라 사고가 불필요하다.
+    // claude-sonnet-5 는 미지정 시 사고가 기본 ON 이고, 사고 토큰이 max_tokens 를 잠식해
+    // 출력이 잘린다(진단 결과). 반드시 disabled 를 명시한다. (CLAUDE.md 참고)
+    thinking: { type: "disabled" },
     // 프롬프트 캐싱(SDK 0.68 GA, beta 헤더 불필요)은 호출부가 켤 때만 건다.
     // 캐시 쓰기 1.25x / 읽기 0.1x 이므로 5분 TTL 안에 2회 이상 호출될 때만 이득 —
     // 골든 채점·배치 재파싱만 true. 단발 호출은 false(쓰기 프리미엄만 물게 됨).
@@ -213,7 +240,40 @@ async function callModel(
       : system,
     messages: [{ role: "user", content: userJson }],
   });
-  return msg.content.map((b) => (b.type === "text" ? b.text : "")).join("");
+  const text = msg.content.map((b) => (b.type === "text" ? b.text : "")).join("");
+  const usage = msg.usage;
+  // output_tokens_details.thinking_tokens 는 SDK 타입에 없을 수 있어 안전하게 읽는다.
+  const thinkingTokens =
+    (usage as { output_tokens_details?: { thinking_tokens?: number } }).output_tokens_details
+      ?.thinking_tokens ?? 0;
+  // 프롬프트 캐싱을 켜면 시스템 프롬프트(~16.8k)가 input_tokens 가 아니라 cache_read/creation
+  // 으로 잡힌다. 실질 입력량을 보려면 셋을 합친다(안 그러면 캐시 적중 시 input 이 사용자 메시지만).
+  totalInputTokens +=
+    usage.input_tokens +
+    (usage.cache_read_input_tokens ?? 0) +
+    (usage.cache_creation_input_tokens ?? 0);
+  totalOutputTokens += usage.output_tokens;
+  return {
+    text,
+    stopReason: msg.stop_reason,
+    inputTokens: usage.input_tokens,
+    outputTokens: usage.output_tokens,
+    thinkingTokens,
+  };
+}
+
+/**
+ * 파싱 실패 시 진단 정보를 남긴다. 원본 출력을 통째로 찍으면 로그가 길어지므로 마지막 200자만.
+ * 출력이 잘렸는지는 stop_reason="max_tokens" / output_tokens 로, 사고가 예산을 먹었는지는
+ * thinking_tokens 로 드러난다.
+ */
+function logRawFailure(label: string, call: ModelCall): void {
+  console.warn(
+    `[parser] ${label} · length=${call.text.length} · stop_reason=${call.stopReason}` +
+      ` · input_tokens=${call.inputTokens} · output_tokens=${call.outputTokens}` +
+      ` · thinking_tokens=${call.thinkingTokens} · max_tokens=${MAX_TOKENS}`,
+  );
+  console.warn(`[parser] 원본 출력 마지막 200자: ${JSON.stringify(call.text.slice(-200))}`);
 }
 
 function validateAndScore(raw: unknown): ParseResult {
@@ -275,10 +335,14 @@ function validateAndScore(raw: unknown): ParseResult {
 export interface ParseOptions {
   /** 시스템 프롬프트에 프롬프트 캐싱을 걸지 여부. 기본 false(단발 호출은 손해). */
   cachePrompt?: boolean;
+  /** 최대 호출 횟수(JSON 실패 시 재시도 포함). 기본 2. 진단 시 1 로 두면 1회만 호출한다. */
+  maxAttempts?: number;
 }
 
 /**
  * 발화 1건을 파싱한다. JSON 파싱 실패 시 1회 재시도하고, 그래도 실패하면 ParseError.
+ * 단, stop_reason="max_tokens"(출력 한도 초과)는 재시도하지 않고 구분된 에러를 던진다 —
+ * 같은 조건으로 다시 불러도 같은 결과라 호출만 낭비된다.
  * 스키마를 통과한 이벤트에만 R6 confidence 를 채운다.
  */
 export async function parseTranscript(
@@ -287,16 +351,26 @@ export async function parseTranscript(
   opts: ParseOptions = {},
 ): Promise<ParseResult> {
   const cachePrompt = opts.cachePrompt ?? false;
+  const maxAttempts = Math.max(1, opts.maxAttempts ?? 2);
   const system = loadSystemPrompt(PARSE_VERSION);
   const client = new Anthropic({ apiKey: env.anthropicApiKey() });
   const userJson = JSON.stringify({ transcript, recorded_at: recordedAt });
 
   let parsed: unknown = null;
-  for (let attempt = 0; attempt < 2; attempt++) {
-    const text = await callModel(client, system, userJson, cachePrompt);
-    parsed = tryParseJson(text);
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const call = await callModel(client, system, userJson, cachePrompt);
+    parsed = tryParseJson(call.text);
     if (parsed !== null) break;
-    if (attempt === 0) console.warn("[parser] LLM 출력이 JSON 이 아님 — 1회 재시도");
+    // 실패한 출력은 버리지 않고 진단 정보를 남긴다(원인 확인용).
+    // 출력 한도 초과는 재시도해도 같은 결과 → 원인을 가리지 않게 구분된 에러로 즉시 던진다.
+    if (call.stopReason === "max_tokens") {
+      logRawFailure("출력 한도 초과 (max_tokens)", call);
+      throw new ParseError(
+        `출력 한도 초과 (max_tokens ${MAX_TOKENS}) — 출력이 잘려 JSON 이 완성되지 않았다`,
+      );
+    }
+    logRawFailure(`LLM 출력이 JSON 이 아님 (attempt ${attempt + 1}/${maxAttempts})`, call);
+    if (attempt < maxAttempts - 1) console.warn("[parser] 재시도");
   }
   if (parsed === null) {
     throw new ParseError("LLM 출력이 유효한 JSON 이 아닙니다 (재시도 후에도 실패)");

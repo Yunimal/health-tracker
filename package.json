@@ -14,7 +14,8 @@
     "format:check": "prettier --check .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:golden": "node scripts/golden.mjs"
+    "test:golden": "node scripts/golden.mjs",
+    "reparse": "node scripts/reparse-all.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.68.0",
@@ -36,6 +37,7 @@
     "prettier": "^3.4.2",
     "supabase": "^2.113.0",
     "tailwindcss": "^4.3.3",
+    "tsx": "^4.23.12",
     "typescript": "^5.7.3",
     "vitest": "^3.0.2"
   }

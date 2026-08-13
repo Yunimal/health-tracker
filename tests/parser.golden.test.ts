@@ -1,7 +1,14 @@
 import { describe, it, beforeAll, expect } from "vitest";
 import { readFileSync, readdirSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
 import { join } from "node:path";
-import { parseTranscript, PARSE_VERSION, getApiCallCount, resetApiCallCount } from "@/lib/parser";
+import {
+  parseTranscript,
+  PARSE_VERSION,
+  getApiCallCount,
+  resetApiCallCount,
+  getTokenTotals,
+  resetTokenTotals,
+} from "@/lib/parser";
 import { env } from "@/lib/env";
 import {
   scoreCase,
@@ -52,6 +59,7 @@ async function runGoldenSuite(): Promise<SuiteReport> {
   loadEnvLocal();
   const cases = loadCases();
   resetApiCallCount();
+  resetTokenTotals();
   const results: CaseResult[] = [];
 
   for (const c of cases) {
@@ -84,13 +92,21 @@ async function runGoldenSuite(): Promise<SuiteReport> {
   const outPath = join(RESULTS_DIR, `${PARSE_VERSION}-${safeModel}.json`);
   writeFileSync(outPath, JSON.stringify(report, null, 2) + "\n", "utf8");
 
-  // 사람이 읽는 표 + 호출 수.
+  // 사람이 읽는 표 + 호출 수 + 토큰 평균.
   console.log("\n" + renderTable(report));
+  const calls = getApiCallCount();
+  const { inputTokens, outputTokens } = getTokenTotals();
   console.log(
-    `\n${cases.length} cases, ${getApiCallCount()} API calls` +
+    `\n${cases.length} cases, ${calls} API calls` +
       (CASE_FILTER ? `  (필터: ${CASE_FILTER})` : "") +
       `  · model=${env.parseModel()}`,
   );
+  if (calls > 0) {
+    console.log(
+      `토큰: input(캐시 포함) 합 ${inputTokens} (평균 ${Math.round(inputTokens / calls)}/call) · ` +
+        `output 합 ${outputTokens} (평균 ${Math.round(outputTokens / calls)}/call)`,
+    );
+  }
   console.log(`결과 저장: ${outPath}\n`);
 
   return report;

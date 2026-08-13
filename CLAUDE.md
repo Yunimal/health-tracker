@@ -48,6 +48,12 @@
 - 파싱 모델: 기본 `claude-sonnet-5` (env `PARSE_MODEL` 로 오버라이드). v6 골든셋에서
   Opus 4.8 과 동일한 41/41 만점(오분류 0)인데 비용이 낮아 기본값으로 채택. 환경변수를
   깜빡해도 비싼 모델로 떨어지지 않도록 기본값 자체를 Sonnet 으로 둔다.
+  - ⚠️ **`claude-sonnet-5` 는 thinking 미지정 시 확장 사고(extended thinking)가 기본 ON 이다.**
+    사고 토큰이 `max_tokens` 를 잠식해 출력(JSON)이 잘린다(진단으로 확인 — 짧은 입력도
+    사고가 4096 토큰을 다 써 text 0자였다). **파싱 요청은 반드시
+    `thinking: { type: "disabled" }` 를 명시한다**(`src/lib/parser/index.ts` callModel). 이
+    파서는 규칙이 프롬프트에 전부 있고 confidence 는 코드가 계산해 사고가 불필요하다.
+    **모델을 바꿀 때 이 기본 동작을 다시 확인할 것.**
 - 테스트: vitest
 - 패키지 매니저: pnpm
 
