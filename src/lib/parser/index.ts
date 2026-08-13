@@ -193,19 +193,69 @@ function loadSystemPrompt(version: string): string {
   return prompt;
 }
 
-/** 프롬프트는 펜스 금지지만, 방어적으로 코드펜스를 벗겨낸다. */
-function stripFences(text: string): string {
-  const t = text.trim();
-  const m = t.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/);
-  return m ? m[1]!.trim() : t;
+function tryJson(text: string): { ok: boolean; value: unknown } {
+  try {
+    return { ok: true, value: JSON.parse(text) };
+  } catch {
+    return { ok: false, value: null };
+  }
 }
 
-function tryParseJson(text: string): unknown {
-  try {
-    return JSON.parse(stripFences(text));
-  } catch {
-    return null;
+/**
+ * 코드펜스 제거: ```json / ``` 로 시작하면 첫 줄(펜스 여는 줄)을 지우고 끝의 ``` 를 지운다.
+ * 펜스가 없으면 입력을 그대로 돌려준다(멀쩡한 출력을 건드리지 않음).
+ */
+function stripFence(t: string): string {
+  if (!t.startsWith("```")) return t;
+  const nl = t.indexOf("\n");
+  let body = nl === -1 ? "" : t.slice(nl + 1); // 여는 줄(```json 등) 제거
+  body = body.trimEnd();
+  if (body.endsWith("```")) body = body.slice(0, -3); // 닫는 ``` 제거
+  return body.trim();
+}
+
+/** 첫 '{' 부터 마지막 '}' 까지 잘라낸다(앞뒤 설명 문장 커버). 없으면 null. */
+function sliceBraces(t: string): string | null {
+  const first = t.indexOf("{");
+  const last = t.lastIndexOf("}");
+  if (first === -1 || last === -1 || last < first) return null;
+  return t.slice(first, last + 1);
+}
+
+export interface LenientJson {
+  ok: boolean;
+  value: unknown; // ok=false 면 무의미
+  normalized: boolean; // 코드펜스/설명문 제거 등 전처리가 필요했는지
+}
+
+/**
+ * 모델 출력을 JSON 으로 파싱한다. **추가 API 호출 없이** 같은 응답을 전처리만 한다.
+ * 프롬프트에 코드펜스 금지가 명시돼 있어도 모델이 가끔 어기므로 코드에서 방어한다.
+ * 순서: (1) trim 후 그대로 파싱 (2) 코드펜스 제거 후 파싱 (3) 첫 '{'~마지막 '}' 슬라이스 후 파싱.
+ * 순수 JSON 은 (1)에서 통과하므로 정규화가 멀쩡한 입력을 망치지 않는다.
+ */
+export function parseJsonLenient(text: string): LenientJson {
+  const t = text.trim();
+
+  // (1) 순수 JSON — 정상 케이스.
+  const direct = tryJson(t);
+  if (direct.ok) return { ok: true, value: direct.value, normalized: false };
+
+  // (2) 코드펜스 제거
+  const defenced = stripFence(t);
+  if (defenced !== t) {
+    const r = tryJson(defenced);
+    if (r.ok) return { ok: true, value: r.value, normalized: true };
   }
+
+  // (3) 첫 '{' ~ 마지막 '}' 슬라이스
+  const sliced = sliceBraces(defenced);
+  if (sliced !== null && sliced !== defenced) {
+    const r = tryJson(sliced);
+    if (r.ok) return { ok: true, value: r.value, normalized: true };
+  }
+
+  return { ok: false, value: null, normalized: false };
 }
 
 /** 모델 호출 결과. text 외에 진단용 메타(stop_reason, 토큰)를 함께 돌려준다. */
@@ -357,10 +407,20 @@ export async function parseTranscript(
   const userJson = JSON.stringify({ transcript, recorded_at: recordedAt });
 
   let parsed: unknown = null;
+  let succeeded = false;
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     const call = await callModel(client, system, userJson, cachePrompt);
-    parsed = tryParseJson(call.text);
-    if (parsed !== null) break;
+    // 같은 응답에 대한 전처리(추가 호출 없음): 코드펜스/설명문을 벗겨 파싱을 시도한다.
+    const lenient = parseJsonLenient(call.text);
+    if (lenient.ok) {
+      if (lenient.normalized) {
+        // 얼마나 자주 일어나는지 세려고 한 줄 남긴다.
+        console.warn("[parser] 출력에 코드펜스가 있어 제거함 (JSON 정규화 후 파싱 성공)");
+      }
+      parsed = lenient.value;
+      succeeded = true;
+      break;
+    }
     // 실패한 출력은 버리지 않고 진단 정보를 남긴다(원인 확인용).
     // 출력 한도 초과는 재시도해도 같은 결과 → 원인을 가리지 않게 구분된 에러로 즉시 던진다.
     if (call.stopReason === "max_tokens") {
@@ -372,7 +432,7 @@ export async function parseTranscript(
     logRawFailure(`LLM 출력이 JSON 이 아님 (attempt ${attempt + 1}/${maxAttempts})`, call);
     if (attempt < maxAttempts - 1) console.warn("[parser] 재시도");
   }
-  if (parsed === null) {
+  if (!succeeded) {
     throw new ParseError("LLM 출력이 유효한 JSON 이 아닙니다 (재시도 후에도 실패)");
   }
 

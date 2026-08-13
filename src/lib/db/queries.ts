@@ -68,20 +68,40 @@ export async function getDayTimeline(
   // 기본은 숨긴 원문 제외. "숨긴 항목 보기" 토글일 때만 포함한다.
   if (!includeHidden) entriesQuery = excludeHidden(entriesQuery);
 
+  // [perf] 계측: 쿼리별/전체 소요 시간을 Vercel Logs 에서 볼 수 있게 찍는다.
+  // 구조: (1) raw_entries 1회 → (2) events/hypotheses/unparsed 3개 병렬(Promise.all).
+  // 즉 순차 왕복은 4회가 아니라 2회다. Supabase(서울)와 함수 리전이 다르면 매 왕복이 태평양 횡단.
+  const tStart = performance.now();
+
+  const tEntries0 = performance.now();
   const { data: entries, error } = await entriesQuery.order("recorded_at", { ascending: false });
+  const tEntries = performance.now() - tEntries0;
   if (error) throw new Error(error.message);
   const rawEntries = (entries ?? []) as RawEntry[];
-  if (rawEntries.length === 0) return [];
+  if (rawEntries.length === 0) {
+    console.log(
+      `[perf] getDayTimeline date=${date} entries=${tEntries.toFixed(0)}ms rows=0 total=${(performance.now() - tStart).toFixed(0)}ms`,
+    );
+    return [];
+  }
 
   const ids = rawEntries.map((e) => e.id);
+  const tRest0 = performance.now();
   const [eventsRes, hypRes, unparsedRes] = await Promise.all([
     supabase.from("events").select("*").in("raw_entry_id", ids).order("occurred_at"),
     supabase.from("hypotheses").select("*").in("raw_entry_id", ids),
     supabase.from("unparsed_fragments").select("*").in("raw_entry_id", ids),
   ]);
+  const tRest = performance.now() - tRest0;
   if (eventsRes.error) throw new Error(eventsRes.error.message);
   if (hypRes.error) throw new Error(hypRes.error.message);
   if (unparsedRes.error) throw new Error(unparsedRes.error.message);
+
+  console.log(
+    `[perf] getDayTimeline date=${date} rows=${rawEntries.length}` +
+      ` entries=${tEntries.toFixed(0)}ms rest_3parallel=${tRest.toFixed(0)}ms` +
+      ` total=${(performance.now() - tStart).toFixed(0)}ms`,
+  );
 
   const eventRows = (eventsRes.data ?? []) as (TimelineEvent & { raw_entry_id: string })[];
   const eventsByEntry = groupBy(eventRows, (e) => e.raw_entry_id);

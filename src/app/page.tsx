@@ -16,13 +16,25 @@ export default async function Page({
 }: {
   searchParams: Promise<{ date?: string; showHidden?: string }>;
 }) {
+  // [perf] 계측: 서버 렌더의 데이터 페칭 단계별 소요 시간을 Vercel Logs 로 찍는다.
+  // auth 는 currentWebUser() — 토큰→사용자 조회(60초 캐시). 캐시 미스면 app_users 왕복 1회 추가.
+  const tStart = performance.now();
+
   const user = await currentWebUser();
+  const tAuth = performance.now() - tStart;
   if (!user) redirect("/login");
 
   const sp = await searchParams;
   const date = sp.date && /^\d{4}-\d{2}-\d{2}$/.test(sp.date) ? sp.date : todayKstDate();
   const showHidden = sp.showHidden === "1";
+  const tTimeline0 = performance.now();
   const timeline = await getDayTimeline(user.id, date, showHidden);
+  const tTimeline = performance.now() - tTimeline0;
+
+  console.log(
+    `[perf] page date=${date} auth=${tAuth.toFixed(0)}ms timeline=${tTimeline.toFixed(0)}ms` +
+      ` render_total=${(performance.now() - tStart).toFixed(0)}ms`,
+  );
 
   // 아직 파싱되지 않은(정리 중) 원문. 있으면 클라이언트가 몇 번 폴링해 결과를 채운다.
   const pendingIds = timeline
