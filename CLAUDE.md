@@ -43,7 +43,8 @@
 ## 스택 (고정 — 변경 금지)
 
 - Next.js 15 App Router + TypeScript (strict)
-- Supabase (Postgres, RLS)
+- Supabase (Postgres, RLS) — **서울 리전이다. Vercel 함수 리전도 `icn1` 로 맞춰야 한다**
+  (`vercel.json` `regions`). 어긋나면 쿼리마다 왕복 250ms 가 붙는다.
 - Anthropic SDK (`@anthropic-ai/sdk`) — structured output 으로 JSON 강제
 - 파싱 모델: 기본 `claude-sonnet-5` (env `PARSE_MODEL` 로 오버라이드). v6 골든셋에서
   Opus 4.8 과 동일한 41/41 만점(오분류 0)인데 비용이 낮아 기본값으로 채택. 환경변수를
