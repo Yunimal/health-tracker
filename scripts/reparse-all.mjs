@@ -4,7 +4,9 @@
  *
  * POST /api/parse 는 토큰 소유자의 원문만 재파싱하므로, 버전을 올릴 때마다 사용자 수만큼
  * 수동 호출해야 한다. 이 스크립트는 service_role 로 DB 에 직접 붙어 **전체 raw_entries** 중
- * parse_version 이 현재 PARSE_VERSION 과 다른 것만 골라 재파싱한다.
+ * parse_version 이 현재 PARSE_VERSION 과 다른 것(버전 불일치)과 parse_error 가 있는 것(파싱
+ * 실패)을 골라 재파싱한다. 실패 건도 대상에 넣는 이유: 파싱 실패 시 parse_version 이 현재
+ * 버전으로 마킹돼 버전 조건에서 빠지므로, 원인을 고쳐도 자동 복구가 안 된다.
  *
  * ⚠️ HTTP 엔드포인트가 아니라 로컬 스크립트다 — 전체 재파싱은 관리 작업이지 사용자 기능이
  *    아니다. 엔드포인트로 열면 그 토큰이 새는 순간 전원 데이터를 건드릴 수 있다.
@@ -107,7 +109,10 @@ async function main() {
       userIdFilter = match.map((u) => u.id);
     }
 
-    // 대상: parse_version 이 현재와 다른 것(미파싱=null 포함). neq 는 null 을 놓치므로 or 로 잡는다.
+    // 대상 = (A) parse_version 이 현재와 다른 것(미파싱=null 포함) ∪ (B) parse_error 가 있는 것.
+    //   (A) neq 는 null 을 놓치므로 is.null 을 함께 or 로 잡는다.
+    //   (B) 파싱 실패한 건은 현재 버전으로 마킹돼 (A)에서 빠진다 — 원인을 고쳐도 자동 복구가
+    //       안 되므로 parse_error 있는 건도 대상에 포함한다.
     // 페이지네이션(1000행 기본 한계)으로 전부 모은다. created_at 오름차순 → 재실행 시 이어서 진행.
     async function fetchTargets() {
       const rows = [];
@@ -116,7 +121,7 @@ async function main() {
         let q = supabase
           .from("raw_entries")
           .select("*")
-          .or(`parse_version.is.null,parse_version.neq.${PARSE_VERSION}`)
+          .or(`parse_version.is.null,parse_version.neq.${PARSE_VERSION},parse_error.not.is.null`)
           .order("created_at", { ascending: true })
           .range(from, from + PAGE - 1);
         if (userIdFilter) q = q.in("user_id", userIdFilter);
@@ -130,6 +135,11 @@ async function main() {
 
     const targets = await fetchTargets();
 
+    // 성공한 버전-불일치 건과 파싱 실패 건을 구분한다(실패가 성공에 섞이지 않게).
+    //   실패 = parse_error 있음. 버전 불일치 = parse_error 없음(=A 로만 걸린 건). 둘은 서로소.
+    const failed = targets.filter((t) => t.parse_error != null);
+    const versionMismatch = targets.filter((t) => t.parse_error == null);
+
     // 사용자별 분포.
     const distribution = new Map();
     for (const e of targets) {
@@ -139,8 +149,9 @@ async function main() {
 
     console.log(`현재 PARSE_VERSION = ${PARSE_VERSION}`);
     console.log(
-      `버전 불일치(재파싱 대상): ${targets.length} 건` +
-        (args.user ? ` · 사용자 필터: ${args.user}` : ""),
+      `재파싱 대상 ${targets.length} 건` +
+        (args.user ? ` · 사용자 필터: ${args.user}` : "") +
+        ` — 버전 불일치 ${versionMismatch.length} 건 / 파싱 실패 ${failed.length} 건`,
     );
     for (const [label, n] of [...distribution].sort((a, b) => b[1] - a[1])) {
       console.log(`  - ${label}: ${n} 건`);
@@ -162,7 +173,7 @@ async function main() {
 
     resetApiCallCount();
     let ok = 0;
-    let failed = 0;
+    let failCount = 0;
     const total = toProcess.length;
     for (let i = 0; i < total; i++) {
       const entry = toProcess[i];
@@ -177,7 +188,7 @@ async function main() {
             `(events ${outcome.events ?? 0}, hyp ${outcome.hypotheses ?? 0}, unparsed ${outcome.unparsed ?? 0})`,
         );
       } else {
-        failed++;
+        failCount++;
         console.log(
           `[${i + 1}/${total}] ${label} · ${entry.id} · 실패: ${outcome.error ?? "알 수 없는 오류"}`,
         );
@@ -185,12 +196,12 @@ async function main() {
     }
 
     console.log(
-      `\n요약: 처리 ${ok + failed} 건 (성공 ${ok} · 실패 ${failed}) · API 호출 ${getApiCallCount()} 회`,
+      `\n요약: 처리 ${ok + failCount} 건 (성공 ${ok} · 실패 ${failCount}) · API 호출 ${getApiCallCount()} 회`,
     );
-    if (failed > 0) {
+    if (failCount > 0) {
       console.log(
-        `실패한 ${failed} 건은 raw_entries.parse_error 에 기록됨(원문은 불변). ` +
-          `원인 해결 후 해당 건만 다시 파싱하려면 웹의 "다시 파싱" 또는 POST /api/parse 를 쓴다.`,
+        `실패한 ${failCount} 건은 raw_entries.parse_error 에 기록됨(원문은 불변). ` +
+          `다음 실행에서 다시 대상이 되며, 개별로는 웹의 "다시 파싱" 또는 POST /api/parse 로도 재시도한다.`,
       );
     }
   } finally {

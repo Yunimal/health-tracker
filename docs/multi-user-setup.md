@@ -100,8 +100,8 @@ update app_users set ingest_token = '<새_토큰>' where label = '나';
 원문만** 재파싱하므로 사용자 수만큼 수동 호출해야 하고, 사용자가 늘면 유지보수가 안 된다.
 
 대신 **로컬 관리 스크립트** `pnpm reparse` 를 쓴다. `service_role` 로 DB 에 직접 붙어 전체
-`raw_entries` 중 `parse_version` 이 현재와 다른 것만 골라 재파싱한다. (원문 `transcript` 는
-건드리지 않는다 — 파생 데이터만 재생성.)
+`raw_entries` 중 **버전 불일치**(`parse_version` 이 현재와 다름)와 **파싱 실패**(`parse_error`
+있음)를 골라 재파싱한다. (원문 `transcript` 는 건드리지 않는다 — 파생 데이터만 재생성.)
 
 > ⚠️ HTTP 엔드포인트가 아니라 로컬 스크립트인 이유: 전체 재파싱은 관리 작업이지 사용자
 > 기능이 아니다. 엔드포인트로 열면 그 토큰이 새는 순간 전원 데이터를 건드릴 수 있다.
@@ -116,7 +116,8 @@ update app_users set ingest_token = '<새_토큰>' where label = '나';
    ```bash
    pnpm reparse -- --dry-run
    ```
-   현재 `PARSE_VERSION`, 재파싱 대상 건수, 사용자별 분포를 출력한다. 실제 API 호출은 없다.
+   현재 `PARSE_VERSION`, 재파싱 대상 건수(**버전 불일치 N건 / 파싱 실패 M건**으로 분리),
+   사용자별 분포를 출력한다. 실제 API 호출은 없다.
 3. **실행:**
    ```bash
    pnpm reparse
@@ -134,8 +135,9 @@ update app_users set ingest_token = '<새_토큰>' where label = '나';
 
 동작 메모:
 
-- **이미 최신 버전으로 파싱된 건은 건너뛴다.** 중간에 끊겨도 다시 `pnpm reparse` 하면
-  남은 것부터 이어서 진행한다(대상 = 버전 불일치 건).
+- **이미 최신 버전으로 성공 파싱된 건은 건너뛴다.** 중간에 끊겨도 다시 `pnpm reparse` 하면
+  남은 것부터 이어서 진행한다(대상 = 버전 불일치 + 파싱 실패).
 - **한 건이 실패해도 멈추지 않는다.** 실패는 `raw_entries.parse_error` 에 기록하고 계속
-  진행한다. 실패한 건은 현재 버전으로 마킹되므로(재실행 시 자동 재시도 대상 아님), 원인을
-  고친 뒤 웹의 "다시 파싱" 또는 `POST /api/parse` 로 개별 재시도한다.
+  진행한다. 실패 건은 `parse_error` 가 남아 **다음 `pnpm reparse` 실행에서 다시 대상**이 된다
+  (원인을 고치면 자동으로 복구된다). 개별로는 웹의 "다시 파싱" 또는 `POST /api/parse` 로도
+  재시도할 수 있다.
