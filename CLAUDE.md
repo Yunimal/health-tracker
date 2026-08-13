@@ -35,6 +35,10 @@
    - **LLM 은 `confidence`/`needs_review` 를 출력하지 않는다.** 사실만 뽑고,
      confidence 는 `src/lib/parser/confidence.ts` 가 R6 로 계산한다. (골든 테스트가
      산수가 아니라 파싱 품질을 재도록.)
+6. **화면에 판단하는 라벨을 붙이지 않는다.** 특히 food 섭취 동기(R19)의 `reason` enum 값
+   (hunger/craving/emotion 등)은 **화면에 노출하지 않는다.** 사용자가 말한 원문(`reason_text`)만
+   그대로 보여주고, `craving` 을 "중독적"·"폭식" 같은 말로 표시하지 않는다. 매일 보는 자기
+   기록에 판단 라벨이 붙으면 관찰 도구가 아니라 자책 도구가 된다. (표시 규칙 원본은 RULES R19)
 
 ## 스택 (고정 — 변경 금지)
 
@@ -68,7 +72,7 @@ tests/golden/                  골든 테스트셋 (case-*.json + 러너)
 - `raw_entries` — 원문. 불변.
 - `events` — 파싱된 사실. 카테고리는 `food | mood | sleep | energy | menstrual | bowel |
 medication | activity` 8개 (0005 로 7개 확장 · 0007 로 activity 추가). payload 스키마는
-  기획서 §5.3 및 RULES R11/R14~R16/R18.
+  기획서 §5.3 및 RULES R11/R14~R16/R18~R19. (food 는 R19 로 섭취 동기 `reason_text`/`reason` 추가)
 - `hypotheses` — 사용자가 스스로 던진 추측. `status: open|supported|not_supported|dismissed`.
 - `unparsed_fragments` — 4개 카테고리로 못 담은 건강 신호 원문. events 와 같은 생명주기의
   파생 데이터(재파싱 시 삭제·재생성). Phase 2 재파싱 재료.

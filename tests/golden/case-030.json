@@ -1,0 +1,46 @@
+{
+  "input": {
+    "transcript": "스트레스 받아서 매운 라면을 끓여 먹었어. 먹고 나니 좀 후련하네.",
+    "recorded_at": "2026-08-13T20:00:00+09:00",
+    "dictionary": {}
+  },
+  "expected": {
+    "events": [
+      {
+        "category": "food",
+        "occurred_at": "2026-08-13T20:00:00+09:00",
+        "occurred_at_precision": "hour",
+        "payload": {
+          "name": "매운 라면",
+          "name_raw": "매운 라면",
+          "kind": "food",
+          "meal_type": "dinner",
+          "amount_text": null,
+          "amount_value": null,
+          "amount_unit": null,
+          "completion_ratio": null,
+          "reason_text": "스트레스 받아서",
+          "reason": "emotion"
+        },
+        "confidence": 0.5,
+        "needs_review": true
+      },
+      {
+        "category": "mood",
+        "occurred_at": "2026-08-13T20:00:00+09:00",
+        "occurred_at_precision": "hour",
+        "payload": {
+          "label": "후련",
+          "valence": 1,
+          "arousal": 1,
+          "note": "먹고 나니 좀 후련함"
+        },
+        "confidence": 0.8,
+        "needs_review": false
+      }
+    ],
+    "hypotheses": [],
+    "unparsed": []
+  },
+  "_covers": ["food reason=emotion(스트레스 받아서)", "이유로 쓰인 감정은 mood 중복 생성 안 함", "별개 서술 '후련'만 mood (R19/R4)", "결과=행동 → hypothesis 없음 (R1)"]
+}

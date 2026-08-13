@@ -1,0 +1,50 @@
+{
+  "parse_version": "v8",
+  "model": "claude-sonnet-5",
+  "generated_at": "2026-08-13T02:31:47.874Z",
+  "case_count": 1,
+  "totals": {
+    "events_expected": 2,
+    "events_actual": 2,
+    "events_matched": 2,
+    "events_missed": 0,
+    "events_extra": 0,
+    "detection_recall": 1,
+    "detection_precision": 1,
+    "detection_f1": 1,
+    "category_correct": 2,
+    "category_accuracy": 1,
+    "occurred_at_within_tol": 2,
+    "occurred_at_pass_rate": 1,
+    "hypotheses_expected": 1,
+    "hypotheses_actual": 1,
+    "hypotheses_matched": 1,
+    "hypothesis_misclassifications": 0
+  },
+  "cases": [
+    {
+      "name": "case-003",
+      "events": {
+        "expected": 2,
+        "actual": 2,
+        "matched": 2,
+        "missed": 0,
+        "extra": 0,
+        "categoryCorrect": 2,
+        "withinTolerance": 2,
+        "missedEvents": [],
+        "extraEvents": [],
+        "categoryErrors": [],
+        "timeErrors": []
+      },
+      "hypotheses": {
+        "expected": 1,
+        "actual": 1,
+        "matched": 1,
+        "misclassifications": 0,
+        "missing": [],
+        "spurious": []
+      }
+    }
+  ]
+}

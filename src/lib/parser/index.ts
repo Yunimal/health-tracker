@@ -9,6 +9,7 @@ import { PROMPT_V4 } from "./prompts/v4";
 import { PROMPT_V5 } from "./prompts/v5";
 import { PROMPT_V6 } from "./prompts/v6";
 import { PROMPT_V7 } from "./prompts/v7";
+import { PROMPT_V8 } from "./prompts/v8";
 import type { Category, OccurredAtPrecision } from "@/lib/db/schema";
 
 /**
@@ -21,7 +22,7 @@ import type { Category, OccurredAtPrecision } from "@/lib/db/schema";
 /** 파싱 모델은 env(PARSE_MODEL)로 오버라이드. 기본값은 env.parseModel() 참고. */
 
 /** 프롬프트 파일명과 동기화한다. 프롬프트를 고치면 prompts/vN.ts 를 새로 만들고 이 값을 올린다. */
-export const PARSE_VERSION = "v7";
+export const PARSE_VERSION = "v8";
 
 const MAX_TOKENS = 4096;
 
@@ -46,6 +47,9 @@ const foodPayloadSchema = z.object({
   amount_value: z.number().nullable(),
   amount_unit: z.string().nullable(),
   completion_ratio: z.number().nullable(),
+  // 섭취 동기 (R19). 이유가 없으면 둘 다 null. 추측 금지.
+  reason_text: z.string().nullable(),
+  reason: z.enum(["hunger", "boredom", "craving", "social", "routine", "emotion"]).nullable(),
 });
 
 const moodPayloadSchema = z.object({
@@ -167,6 +171,7 @@ const PROMPTS: Record<string, string> = {
   v5: PROMPT_V5,
   v6: PROMPT_V6,
   v7: PROMPT_V7,
+  v8: PROMPT_V8,
 };
 
 function loadSystemPrompt(version: string): string {

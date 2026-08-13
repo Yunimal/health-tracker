@@ -1,0 +1,33 @@
+{
+  "input": {
+    "transcript": "야근하다가 밤늦게 편의점에서 삼각김밥 하나 사 먹었어.",
+    "recorded_at": "2026-08-13T23:00:00+09:00",
+    "dictionary": {}
+  },
+  "expected": {
+    "events": [
+      {
+        "category": "food",
+        "occurred_at": "2026-08-13T23:00:00+09:00",
+        "occurred_at_precision": "part_of_day",
+        "payload": {
+          "name": "삼각김밥",
+          "name_raw": "삼각김밥",
+          "kind": "food",
+          "meal_type": "snack",
+          "amount_text": "하나",
+          "amount_value": 1,
+          "amount_unit": "개",
+          "completion_ratio": null,
+          "reason_text": null,
+          "reason": null
+        },
+        "confidence": 0.8,
+        "needs_review": false
+      }
+    ],
+    "hypotheses": [],
+    "unparsed": []
+  },
+  "_covers": ["food reason", "상황(야근/밤늦게)만 있고 이유 진술 없음 → reason null (추측 금지 R19)"]
+}

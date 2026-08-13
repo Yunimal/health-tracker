@@ -1,5 +1,6 @@
 "use server";
 
+import { after } from "next/server";
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
@@ -49,7 +50,12 @@ export async function logout(): Promise<void> {
   redirect("/login");
 }
 
-/** 텍스트 원문을 저장하고(파싱 대조를 즉시 보려고) 파싱까지 마친 뒤 목록을 갱신한다. */
+/**
+ * 텍스트 원문을 저장하고 즉시 반환한다. 파싱은 기다리지 않고 백그라운드로 돌린다
+ * (POST /api/entries 와 동일하게 after() 로 미룬다). 가족이 쓰는 웹 입력이 파싱 몇 초에
+ * 멈춰 있지 않게 하려는 것. 원문 카드는 바로 뜨고, "정리 중" 표시는 클라이언트가 몇 번
+ * 폴링해 채운다(PendingPoller). 파싱이 실패해도 원문은 남고 parse_error 에 기록된다.
+ */
 export async function createTextEntry(text: string): Promise<ActionResult> {
   if (text.trim().length === 0) return { ok: false, error: "빈 입력" };
   const supabase = getSupabaseClient();
@@ -64,9 +70,21 @@ export async function createTextEntry(text: string): Promise<ActionResult> {
     .single();
   if (error) return { ok: false, error: error.message };
 
-  // 단축어(비동기)와 달리 웹은 결과를 바로 보여주므로 파싱을 기다린다.
-  // 파싱이 실패해도 원문은 이미 저장됐다(reparseEntry 가 parse_error 에 기록).
-  await reparseEntry(supabase, userId, data as RawEntry);
+  // 파싱은 응답 이후 백그라운드로. 실패해도 원문은 이미 저장됐다(parse_error 에 기록).
+  const entry = data as RawEntry;
+  try {
+    after(async () => {
+      try {
+        await reparseEntry(getSupabaseClient(), userId, entry);
+      } catch (err) {
+        console.error(`[actions] 백그라운드 파싱 실패 (raw_entry ${entry.id}):`, err);
+      }
+    });
+  } catch (err) {
+    // after() 가 요청 스코프 밖에서 호출되면(예: 테스트) 스케줄만 건너뛴다.
+    console.warn("[actions] after() 스케줄 생략:", err);
+  }
+
   revalidatePath("/");
   return { ok: true };
 }

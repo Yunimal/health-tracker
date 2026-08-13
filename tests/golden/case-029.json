@@ -1,0 +1,71 @@
+{
+  "input": {
+    "transcript": "배고파서 떡볶이랑 순대랑 튀김까지 시켜서 다 먹었어.",
+    "recorded_at": "2026-08-13T17:00:00+09:00",
+    "dictionary": {}
+  },
+  "expected": {
+    "events": [
+      {
+        "category": "food",
+        "occurred_at": "2026-08-13T17:00:00+09:00",
+        "occurred_at_precision": "hour",
+        "payload": {
+          "name": "떡볶이",
+          "name_raw": "떡볶이",
+          "kind": "food",
+          "meal_type": "snack",
+          "amount_text": null,
+          "amount_value": null,
+          "amount_unit": null,
+          "completion_ratio": 1.0,
+          "reason_text": "배고파서",
+          "reason": "hunger"
+        },
+        "confidence": 0.5,
+        "needs_review": true
+      },
+      {
+        "category": "food",
+        "occurred_at": "2026-08-13T17:00:00+09:00",
+        "occurred_at_precision": "hour",
+        "payload": {
+          "name": "순대",
+          "name_raw": "순대",
+          "kind": "food",
+          "meal_type": "snack",
+          "amount_text": null,
+          "amount_value": null,
+          "amount_unit": null,
+          "completion_ratio": 1.0,
+          "reason_text": "배고파서",
+          "reason": "hunger"
+        },
+        "confidence": 0.5,
+        "needs_review": true
+      },
+      {
+        "category": "food",
+        "occurred_at": "2026-08-13T17:00:00+09:00",
+        "occurred_at_precision": "hour",
+        "payload": {
+          "name": "튀김",
+          "name_raw": "튀김",
+          "kind": "food",
+          "meal_type": "snack",
+          "amount_text": null,
+          "amount_value": null,
+          "amount_unit": null,
+          "completion_ratio": 1.0,
+          "reason_text": "배고파서",
+          "reason": "hunger"
+        },
+        "confidence": 0.5,
+        "needs_review": true
+      }
+    ],
+    "hypotheses": [],
+    "unparsed": []
+  },
+  "_covers": ["food reason", "음식 여러 개+이유 하나(배고파서) → 모두 hunger (R19 귀속 범위)", "R13 분리"]
+}

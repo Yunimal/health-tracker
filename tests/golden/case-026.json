@@ -1,0 +1,33 @@
+{
+  "input": {
+    "transcript": "자기 전에 초콜릿이 자꾸 당겨서 한 봉지를 다 먹어버렸어. 멈추기가 어렵더라.",
+    "recorded_at": "2026-08-13T23:30:00+09:00",
+    "dictionary": {}
+  },
+  "expected": {
+    "events": [
+      {
+        "category": "food",
+        "occurred_at": "2026-08-13T23:30:00+09:00",
+        "occurred_at_precision": "hour",
+        "payload": {
+          "name": "초콜릿",
+          "name_raw": "초콜릿",
+          "kind": "food",
+          "meal_type": "snack",
+          "amount_text": "한 봉지",
+          "amount_value": 1,
+          "amount_unit": "봉지",
+          "completion_ratio": 1.0,
+          "reason_text": "자꾸 당겨서",
+          "reason": "craving"
+        },
+        "confidence": 0.8,
+        "needs_review": false
+      }
+    ],
+    "hypotheses": [],
+    "unparsed": []
+  },
+  "_covers": ["food reason=craving(당겨서 / 멈추기 어려움)", "완식 completion 1.0", "craving 은 판단 라벨로 표시하지 않음 (R19)"]
+}

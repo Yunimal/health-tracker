@@ -1,0 +1,52 @@
+{
+  "input": {
+    "transcript": "아침엔 배고파서 밥 한 공기 먹었고, 오후엔 입이 심심해서 초코파이 두 개 먹었어.",
+    "recorded_at": "2026-08-13T18:00:00+09:00",
+    "dictionary": {}
+  },
+  "expected": {
+    "events": [
+      {
+        "category": "food",
+        "occurred_at": "2026-08-13T08:00:00+09:00",
+        "occurred_at_precision": "part_of_day",
+        "payload": {
+          "name": "밥",
+          "name_raw": "밥",
+          "kind": "food",
+          "meal_type": "breakfast",
+          "amount_text": "한 공기",
+          "amount_value": 1,
+          "amount_unit": "공기",
+          "completion_ratio": null,
+          "reason_text": "배고파서",
+          "reason": "hunger"
+        },
+        "confidence": 0.8,
+        "needs_review": false
+      },
+      {
+        "category": "food",
+        "occurred_at": "2026-08-13T15:00:00+09:00",
+        "occurred_at_precision": "part_of_day",
+        "payload": {
+          "name": "초코파이",
+          "name_raw": "초코파이",
+          "kind": "food",
+          "meal_type": "snack",
+          "amount_text": "두 개",
+          "amount_value": 2,
+          "amount_unit": "개",
+          "completion_ratio": null,
+          "reason_text": "입이 심심해서",
+          "reason": "boredom"
+        },
+        "confidence": 0.8,
+        "needs_review": false
+      }
+    ],
+    "hypotheses": [],
+    "unparsed": []
+  },
+  "_covers": ["food reason", "reason=hunger(배고파서)", "reason=boredom(입이 심심해서)", "음식별로 다른 이유 (R19)"]
+}

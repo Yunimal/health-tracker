@@ -1,0 +1,52 @@
+{
+  "input": {
+    "transcript": "점심에 김치찌개랑 공깃밥 먹었어.",
+    "recorded_at": "2026-08-13T13:00:00+09:00",
+    "dictionary": {}
+  },
+  "expected": {
+    "events": [
+      {
+        "category": "food",
+        "occurred_at": "2026-08-13T12:30:00+09:00",
+        "occurred_at_precision": "part_of_day",
+        "payload": {
+          "name": "김치찌개",
+          "name_raw": "김치찌개",
+          "kind": "food",
+          "meal_type": "lunch",
+          "amount_text": null,
+          "amount_value": null,
+          "amount_unit": null,
+          "completion_ratio": null,
+          "reason_text": null,
+          "reason": null
+        },
+        "confidence": 0.5,
+        "needs_review": true
+      },
+      {
+        "category": "food",
+        "occurred_at": "2026-08-13T12:30:00+09:00",
+        "occurred_at_precision": "part_of_day",
+        "payload": {
+          "name": "공깃밥",
+          "name_raw": "공깃밥",
+          "kind": "food",
+          "meal_type": "lunch",
+          "amount_text": null,
+          "amount_value": null,
+          "amount_unit": null,
+          "completion_ratio": null,
+          "reason_text": null,
+          "reason": null
+        },
+        "confidence": 0.5,
+        "needs_review": true
+      }
+    ],
+    "hypotheses": [],
+    "unparsed": []
+  },
+  "_covers": ["food reason=null(이유 없는 일반 식사)", "reason 부재는 confidence 무페널티 (R19)", "R13 분리"]
+}

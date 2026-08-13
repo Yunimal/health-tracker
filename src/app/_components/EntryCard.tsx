@@ -8,6 +8,10 @@ import HideRestoreButton from "./HideRestoreButton";
 export default function EntryCard({ data }: { data: TimelineData }) {
   const { entry, events, hypotheses, unparsed } = data;
   const hidden = entry.hidden_at != null;
+  // 파싱 실패 시 reparseEntry 가 parsed_at 과 parse_error 를 함께 채운다. 따라서
+  // 정리 중 = 둘 다 비어 있음, 정리 실패 = parse_error 있음, 완료 = 그 외.
+  const failed = entry.parse_error != null;
+  const pending = entry.parsed_at == null && entry.parse_error == null;
 
   return (
     <article className={`rounded-lg border border-gray-300 ${hidden ? "opacity-50" : ""}`}>
@@ -15,10 +19,8 @@ export default function EntryCard({ data }: { data: TimelineData }) {
         <span className="text-[11px] text-gray-400">
           {formatDayTime(entry.recorded_at)} · {sourceLabel(entry.source)}
           {hidden && <span className="ml-1 text-gray-400">· 숨김</span>}
-          {entry.parse_error && <span className="ml-1 text-amber-700">· 파싱 오류</span>}
-          {!entry.parsed_at && !entry.parse_error && (
-            <span className="ml-1 text-gray-400">· 미파싱</span>
-          )}
+          {failed && <span className="ml-1 text-amber-700">· 정리 실패</span>}
+          {pending && <span className="ml-1 text-gray-400">· 정리 중…</span>}
         </span>
         <span className="flex items-center gap-2">
           <ReparseButton rawEntryId={entry.id} />
@@ -31,46 +33,61 @@ export default function EntryCard({ data }: { data: TimelineData }) {
         {entry.transcript}
       </p>
 
-      {/* 파싱 결과 — 그 아래 작게. */}
+      {/* 파싱 결과 — 그 아래 작게. 정리 중 / 정리 실패 / 완료 는 서로 배타적이다. */}
       <div className="flex flex-col gap-2 border-t border-gray-100 px-3 py-2">
-        {events.length > 0 && (
-          <div className="flex flex-col gap-1">
-            {events.map((e) => (
-              <EventItem key={e.id} event={e} />
-            ))}
+        {pending ? (
+          <p className="animate-pulse text-xs text-gray-400">정리 중…</p>
+        ) : failed ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs text-amber-700">정리하지 못했어요.</span>
+            <ReparseButton
+              rawEntryId={entry.id}
+              label="정리 실패 — 다시 파싱"
+              className="rounded border border-amber-300 bg-amber-50 px-2 py-0.5 text-xs text-amber-800 hover:bg-amber-100 disabled:opacity-40"
+            />
           </div>
-        )}
+        ) : (
+          <>
+            {events.length > 0 && (
+              <div className="flex flex-col gap-1">
+                {events.map((e) => (
+                  <EventItem key={e.id} event={e} />
+                ))}
+              </div>
+            )}
 
-        {hypotheses.length > 0 && (
-          <ul className="flex flex-col gap-1">
-            {hypotheses.map((h) => (
-              <li
-                key={h.id}
-                className="rounded border border-dashed border-gray-300 px-2 py-1 text-sm text-gray-600"
-              >
-                <span className="mr-1 text-[11px] text-gray-400">추측</span>“{h.statement}”
-                {(h.cause_hint || h.effect_hint) && (
-                  <span className="block text-[11px] text-gray-400">
-                    {h.cause_hint ?? "?"} → {h.effect_hint ?? "?"}
-                  </span>
-                )}
-              </li>
-            ))}
-          </ul>
-        )}
+            {hypotheses.length > 0 && (
+              <ul className="flex flex-col gap-1">
+                {hypotheses.map((h) => (
+                  <li
+                    key={h.id}
+                    className="rounded border border-dashed border-gray-300 px-2 py-1 text-sm text-gray-600"
+                  >
+                    <span className="mr-1 text-[11px] text-gray-400">추측</span>“{h.statement}”
+                    {(h.cause_hint || h.effect_hint) && (
+                      <span className="block text-[11px] text-gray-400">
+                        {h.cause_hint ?? "?"} → {h.effect_hint ?? "?"}
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
 
-        {unparsed.length > 0 && (
-          <ul className="flex flex-wrap gap-1">
-            {unparsed.map((u) => (
-              <li key={u.id} className="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-500">
-                {u.text}
-              </li>
-            ))}
-          </ul>
-        )}
+            {unparsed.length > 0 && (
+              <ul className="flex flex-wrap gap-1">
+                {unparsed.map((u) => (
+                  <li key={u.id} className="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-500">
+                    {u.text}
+                  </li>
+                ))}
+              </ul>
+            )}
 
-        {events.length === 0 && hypotheses.length === 0 && unparsed.length === 0 && (
-          <p className="text-xs text-gray-400">파싱된 항목 없음</p>
+            {events.length === 0 && hypotheses.length === 0 && unparsed.length === 0 && (
+              <p className="text-xs text-gray-400">파싱된 항목 없음</p>
+            )}
+          </>
         )}
       </div>
     </article>

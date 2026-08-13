@@ -6,6 +6,7 @@ import DateNav from "./_components/DateNav";
 import EntryCard from "./_components/EntryCard";
 import ShowHiddenToggle from "./_components/ShowHiddenToggle";
 import UserBar from "./_components/UserBar";
+import PendingPoller from "./_components/PendingPoller";
 
 // DB/searchParams 에 의존하는 동적 페이지. 프리렌더하지 않는다.
 export const dynamic = "force-dynamic";
@@ -23,6 +24,12 @@ export default async function Page({
   const showHidden = sp.showHidden === "1";
   const timeline = await getDayTimeline(user.id, date, showHidden);
 
+  // 아직 파싱되지 않은(정리 중) 원문. 있으면 클라이언트가 몇 번 폴링해 결과를 채운다.
+  const pendingIds = timeline
+    .filter((d) => d.entry.parsed_at == null && d.entry.parse_error == null)
+    .map((d) => d.entry.id)
+    .sort();
+
   return (
     <main className="mx-auto flex max-w-3xl flex-col gap-4 p-4">
       <header className="flex flex-col gap-3">
@@ -39,6 +46,8 @@ export default async function Page({
           </div>
         </div>
       </header>
+
+      {pendingIds.length > 0 && <PendingPoller key={pendingIds.join(",")} />}
 
       {timeline.length === 0 ? (
         <p className="py-8 text-center text-sm text-gray-400">이 날짜의 기록이 없습니다.</p>

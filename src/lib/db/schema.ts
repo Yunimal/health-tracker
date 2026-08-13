@@ -15,6 +15,9 @@ export type HypothesisStatus = "open" | "supported" | "not_supported" | "dismiss
 // food
 export type FoodKind = "food" | "drink" | "skipped_meal";
 export type MealType = "breakfast" | "lunch" | "dinner" | "snack";
+// 섭취 동기(왜 먹었나). 발화에 진술된 경우만. 추측하지 않는다. (RULES R19)
+export type FoodReason =
+  "hunger" | "boredom" | "craving" | "social" | "routine" | "emotion";
 
 export interface FoodPayload {
   // 결식(skipped_meal)이면 name/name_raw/amount_* 는 모두 null 이다. (RULES R11/R12)
@@ -26,6 +29,10 @@ export interface FoodPayload {
   amount_value: number | null; // 추정치, 없으면 null
   amount_unit: string | null;
   completion_ratio: number | null; // "80% 정도 먹음" → 0.8
+  // 섭취 동기 (R19). 발화에 이유가 없으면 둘 다 null. 상황으로 짐작하지 않는다.
+  // 화면에는 reason(enum)을 노출하지 않고 reason_text 원문만 보여준다.
+  reason_text: string | null; // 이유를 가장 직접적으로 진술한 원문 1구절, 없으면 null
+  reason: FoodReason | null;
 }
 
 // mood — valence: -2(매우 부정) ~ +2(매우 긍정), arousal: 0(차분) ~ 3(각성)
