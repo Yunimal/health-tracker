@@ -202,13 +202,28 @@ export type Event =
 // ── hypotheses ─────────────────────────────────────────────────────────────
 export interface Hypothesis {
   id: string;
-  raw_entry_id: string | null;
+  raw_entry_id: string | null; // 최초 생성 원문(origin). 카운팅은 hypothesis_mentions 가 담당. (0008)
   user_id: string;
-  statement: string;
+  statement: string; // 최초 표현(유지)
+  recent_statement: string | null; // 가장 최근 표현 (0008)
   cause_hint: string | null;
   effect_hint: string | null;
-  mention_count: number;
+  mention_count: number; // 이 의심을 표현한 서로 다른 raw_entry 수 = mention 행 수 (0008)
   status: HypothesisStatus;
+  created_at: string;
+}
+
+/**
+ * 가설 mention. 같은 의심(hypothesis)을 표현한 raw_entry 를 링크한다. (0008)
+ * events 와 같은 생명주기의 파생 데이터(재파싱 시 삭제·재생성).
+ * unique(hypothesis_id, raw_entry_id) — 한 원문은 한 의심에 한 번만.
+ */
+export interface HypothesisMention {
+  id: string;
+  hypothesis_id: string;
+  raw_entry_id: string;
+  user_id: string;
+  statement: string | null;
   created_at: string;
 }
 
