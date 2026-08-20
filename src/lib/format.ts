@@ -154,6 +154,24 @@ export function formatDayTime(iso: string): string {
   return `${relativeDay(iso)} ${clockTime(toKst(iso))}`;
 }
 
+/**
+ * 가설의 cause_hint/effect_hint 와 이벤트를 이어줄 때 쓰는 식별 명사. 없으면 null.
+ * 판단이 아니라 단순 문자열 매칭용이다 — food/medication/activity 는 name, mood 는 label.
+ * (상관 계산이 아니라 "이름이 겹치는 이벤트"를 나란히 보여주기 위한 것. 기획서 §3)
+ */
+export function eventName(category: Category, payload: Record<string, unknown>): string | null {
+  switch (category) {
+    case "food":
+    case "medication":
+    case "activity":
+      return str(payload, "name") ?? null;
+    case "mood":
+      return str(payload, "label") ?? null;
+    default:
+      return null;
+  }
+}
+
 // ── 이벤트 한 줄 요약 (날것 필드 대신 자연스러운 문장) ─────────────────────────
 /** 손으로 교정돼 필드가 섞여 있어도 방어적으로 읽는다. 숫자 척도는 말로 푼다. */
 export function summarizeEvent(category: Category, payload: Record<string, unknown>): string {

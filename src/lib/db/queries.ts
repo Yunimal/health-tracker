@@ -1,6 +1,7 @@
 import "server-only";
 import { getSupabaseClient } from "@/lib/db/client";
 import { excludeHidden } from "@/lib/db/filters";
+import { eventName } from "@/lib/format";
 import type { Category, Hypothesis, RawEntry, UnparsedFragment } from "@/lib/db/schema";
 
 /** 타임라인 표시용 이벤트(행 그대로, payload 는 jsonb 이므로 느슨하게). */
@@ -117,4 +118,119 @@ export async function getDayTimeline(
     hypotheses: hypByEntry.get(entry.id) ?? [],
     unparsed: unparsedByEntry.get(entry.id) ?? [],
   }));
+}
+
+// ── 가설 (hypotheses) ────────────────────────────────────────────────────────
+
+/** 사용자의 가설 전체를 최근순으로. 상태별 정렬/그룹핑은 화면(page)이 한다. */
+export async function getHypotheses(userId: string): Promise<Hypothesis[]> {
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
+    .from("hypotheses")
+    .select("*")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as Hypothesis[];
+}
+
+/** open(아직 판단 안 한) 가설 수. 메인 화면의 "가설 N개" 링크에 쓴다. */
+export async function getOpenHypothesisCount(userId: string): Promise<number> {
+  const supabase = getSupabaseClient();
+  const { count, error } = await supabase
+    .from("hypotheses")
+    .select("*", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .eq("status", "open");
+  if (error) throw new Error(error.message);
+  return count ?? 0;
+}
+
+/** cause 시점 기준 ±12시간 안의, 다른 카테고리 이벤트 1건. */
+export interface AroundEvent extends TimelineEvent {
+  delta_ms: number; // cause 발생 시각 기준 상대 시각(양수 = 그 뒤에 일어남)
+}
+
+/** cause 후보 이벤트 1건과, 그 전후 12시간 안에 일어난 다른 카테고리 이벤트들. */
+export interface CauseOccurrence {
+  cause: TimelineEvent;
+  around: AroundEvent[];
+}
+
+export interface HypothesisDetail {
+  hypothesis: Hypothesis;
+  matchedNames: string[]; // cause_hint 와 이름이 겹쳐 원인 후보로 잡힌 이벤트 이름들
+  occurrences: CauseOccurrence[]; // 시간순
+  distinctDays: number; // cause 후보가 나타난 서로 다른 날 수 (표본 수 표시용)
+}
+
+const CAUSE_WINDOW_MS = 12 * 60 * 60 * 1000;
+const normName = (s: string | null): string => (s ?? "").replace(/\s+/g, "");
+const kstDayKey = (iso: string): string =>
+  new Date(new Date(iso).getTime() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
+/**
+ * 가설 1건 + "나란히 보여주기"용 데이터. **상관/확률을 계산하지 않는다.**
+ * cause_hint 와 이름이 겹치는 이벤트(원인 후보)를 찾고, 각 발생 시점 전후 12시간 안의
+ * 다른 카테고리 이벤트를 그대로 모아 시간순으로 돌려준다. 판단은 사용자가 한다. (기획서 §3)
+ * 없는 가설이면 null. 서버 전용(service role).
+ */
+export async function getHypothesisDetail(
+  userId: string,
+  hypothesisId: string,
+): Promise<HypothesisDetail | null> {
+  const supabase = getSupabaseClient();
+
+  const { data: hypRow, error: hErr } = await supabase
+    .from("hypotheses")
+    .select("*")
+    .eq("id", hypothesisId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (hErr) throw new Error(hErr.message);
+  if (!hypRow) return null;
+  const hypothesis = hypRow as Hypothesis;
+
+  const { data: evRows, error: eErr } = await supabase
+    .from("events")
+    .select("*")
+    .eq("user_id", userId)
+    .order("occurred_at");
+  if (eErr) throw new Error(eErr.message);
+  const events = (evRows ?? []) as TimelineEvent[];
+
+  const time = (e: TimelineEvent): number => new Date(e.occurred_at).getTime();
+  const causeNorm = normName(hypothesis.cause_hint);
+
+  // 원인 후보 = cause_hint 안에 이름이 통째로 들어가는 이벤트. (부분 문자열 매칭, 2자 이상)
+  // 지어내지 않는다: 겹치는 게 없으면 후보도 없다. 사용자가 직접 보고 판단하게 둔다.
+  const matched = causeNorm
+    ? events.filter((e) => {
+        const nn = normName(eventName(e.category, e.payload));
+        return nn.length >= 2 && causeNorm.includes(nn);
+      })
+    : [];
+
+  const occurrences: CauseOccurrence[] = matched
+    .map((cause) => {
+      const ct = time(cause);
+      const around: AroundEvent[] = events
+        .filter(
+          (o) =>
+            o.id !== cause.id &&
+            o.category !== cause.category &&
+            Math.abs(time(o) - ct) <= CAUSE_WINDOW_MS,
+        )
+        .map((o) => ({ ...o, delta_ms: time(o) - ct }))
+        .sort((a, b) => time(a) - time(b));
+      return { cause, around };
+    })
+    .sort((a, b) => time(a.cause) - time(b.cause));
+
+  const distinctDays = new Set(matched.map((e) => kstDayKey(e.occurred_at))).size;
+  const matchedNames = [
+    ...new Set(matched.map((e) => eventName(e.category, e.payload)).filter((n): n is string => !!n)),
+  ];
+
+  return { hypothesis, matchedNames, occurrences, distinctDays };
 }

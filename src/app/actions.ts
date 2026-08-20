@@ -7,7 +7,7 @@ import { redirect } from "next/navigation";
 import { getSupabaseClient } from "@/lib/db/client";
 import { AUTH_COOKIE, currentWebUser, resolveUserByToken } from "@/lib/auth";
 import { reparseEntry } from "@/lib/parser/persist";
-import type { Category, RawEntry } from "@/lib/db/schema";
+import type { Category, HypothesisStatus, RawEntry } from "@/lib/db/schema";
 
 /**
  * 타임라인 웹의 서버 액션. 브라우저는 이 함수들만 호출한다.
@@ -179,5 +179,29 @@ export async function unhideEntry(rawEntryId: string): Promise<ActionResult> {
     .eq("user_id", userId);
   if (error) return { ok: false, error: error.message };
   revalidatePath("/");
+  return { ok: true };
+}
+
+/**
+ * 가설 상태 변경. open/supported/not_supported/dismissed 사이를 오간다.
+ * status 는 사용자의 판단을 담는 필드일 뿐, 파싱 파생 데이터가 아니라서 자유롭게 갱신한다.
+ * (statement/cause_hint 등 파싱 결과는 건드리지 않는다 — 재파싱해도 유지되도록.)
+ * "정한" 가설을 다시 open 으로 되돌리는 것도 이 액션 하나로 처리한다.
+ */
+export async function setHypothesisStatus(
+  id: string,
+  status: HypothesisStatus,
+): Promise<ActionResult> {
+  const supabase = getSupabaseClient();
+  const user = await currentWebUser();
+  if (!user) return { ok: false, error: "로그인이 필요합니다" };
+  const { error } = await supabase
+    .from("hypotheses")
+    .update({ status })
+    .eq("id", id)
+    .eq("user_id", user.id);
+  if (error) return { ok: false, error: error.message };
+  revalidatePath("/hypotheses");
+  revalidatePath("/"); // 메인의 "가설 N개" 카운트도 갱신
   return { ok: true };
 }

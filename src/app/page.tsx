@@ -1,5 +1,6 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getDayTimeline, todayKstDate } from "@/lib/db/queries";
+import { getDayTimeline, getOpenHypothesisCount, todayKstDate } from "@/lib/db/queries";
 import { currentWebUser } from "@/lib/auth";
 import TextEntryForm from "./_components/TextEntryForm";
 import DateNav from "./_components/DateNav";
@@ -28,7 +29,11 @@ export default async function Page({
   const date = sp.date && /^\d{4}-\d{2}-\d{2}$/.test(sp.date) ? sp.date : todayKstDate();
   const showHidden = sp.showHidden === "1";
   const tTimeline0 = performance.now();
-  const timeline = await getDayTimeline(user.id, date, showHidden);
+  // 타임라인과 "가설 N개" 카운트를 병렬로 가져온다(순차 왕복 방지).
+  const [timeline, openHypothesisCount] = await Promise.all([
+    getDayTimeline(user.id, date, showHidden),
+    getOpenHypothesisCount(user.id),
+  ]);
   const tTimeline = performance.now() - tTimeline0;
 
   console.log(
@@ -49,6 +54,12 @@ export default async function Page({
           <h1 className="text-lg font-semibold">오늘의 기록</h1>
           <UserBar label={user.label} />
         </div>
+        <Link
+          href="/hypotheses"
+          className="self-start rounded-full border border-gray-300 px-3 py-0.5 text-xs text-gray-600 hover:bg-gray-50"
+        >
+          가설 {openHypothesisCount}개 ›
+        </Link>
         <TextEntryForm />
         <div className="flex items-center justify-between">
           <DateNav date={date} />
