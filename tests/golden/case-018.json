@@ -61,10 +61,22 @@
         "payload": { "level": 2, "note": "계속 피곤함" },
         "confidence": 0.8,
         "needs_review": false
+      },
+      {
+        "category": "digestion",
+        "occurred_at": "2026-08-12T15:30:00+09:00",
+        "occurred_at_precision": "hour",
+        "payload": {
+          "kind": "bloating",
+          "intensity_text": null,
+          "note": "속이 더부룩"
+        },
+        "confidence": 0.8,
+        "needs_review": false
       }
     ],
     "hypotheses": [],
-    "unparsed": ["속이 더부룩해"]
+    "unparsed": []
   },
   "_covers": [
     "새+기존 카테고리 혼재",
@@ -72,6 +84,6 @@
     "energy",
     "menstrual",
     "medication",
-    "소화불량(애매)"
+    "digestion(더부룩) — R15 소화 폐기로 unparsed→digestion (R21)"
   ]
 }

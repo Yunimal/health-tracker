@@ -1,0 +1,28 @@
+{
+  "input": {
+    "transcript": "요즘 새벽에 자다가 자꾸 깨. 어제도 두세 번은 깬 것 같아.",
+    "recorded_at": "2026-08-19T08:00:00+09:00",
+    "dictionary": {}
+  },
+  "expected": {
+    "events": [
+      {
+        "category": "sleep",
+        "occurred_at": "2026-08-19T03:00:00+09:00",
+        "occurred_at_precision": "part_of_day",
+        "payload": {
+          "bedtime": null,
+          "wake_time": null,
+          "quality": null,
+          "interruptions": null,
+          "note": "새벽에 자다가 자꾸 깸 (어제 두세 번)"
+        },
+        "confidence": 0.8,
+        "needs_review": false
+      }
+    ],
+    "hypotheses": [],
+    "unparsed": []
+  },
+  "_covers": ["v9 버그: 수면 중간 각성 → sleep 이벤트 interruptions/note (R22). unparsed 아님", "'자꾸'는 모호 → interruptions null, note 에 원문"]
+}

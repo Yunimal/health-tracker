@@ -22,10 +22,23 @@
         },
         "confidence": 0.8,
         "needs_review": false
+      },
+      {
+        "category": "appetite",
+        "occurred_at": "2026-08-11T13:20:00+09:00",
+        "occurred_at_precision": "hour",
+        "payload": {
+          "kind": "hunger",
+          "intensity_text": "좀",
+          "controllable_text": null,
+          "note": "배는 좀 고픈데 먹을 시간이 없음"
+        },
+        "confidence": 0.8,
+        "needs_review": false
       }
     ],
     "hypotheses": [],
-    "unparsed": ["배는 좀 고픈데"]
+    "unparsed": []
   },
-  "_covers": ["결식", "food", "배고픔 상태(애매)"]
+  "_covers": ["결식", "food", "appetite(배고픔) — R3 폐기로 unparsed→appetite (R20)"]
 }

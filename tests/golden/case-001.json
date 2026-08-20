@@ -41,6 +41,19 @@
         "needs_review": false
       },
       {
+        "category": "appetite",
+        "occurred_at": "2026-08-10T09:00:00+09:00",
+        "occurred_at_precision": "hour",
+        "payload": {
+          "kind": "hunger",
+          "intensity_text": null,
+          "controllable_text": null,
+          "note": "배가 고파"
+        },
+        "confidence": 0.8,
+        "needs_review": false
+      },
+      {
         "category": "sleep",
         "occurred_at": "2026-08-09T23:00:00+09:00",
         "occurred_at_precision": "part_of_day",
@@ -107,7 +120,7 @@
         "effect_hint": "수면 질 저하"
       }
     ],
-    "unparsed": ["배가 고파", "멜라토닌 안 먹음"]
+    "unparsed": ["멜라토닌 안 먹음"]
   },
   "_covers": [
     "사실+추측 혼재",
@@ -116,6 +129,7 @@
     "food",
     "sleep",
     "energy",
+    "appetite(배고픔) — R3 폐기로 unparsed→appetite (R20)",
     "기획서 §2 앵커"
   ]
 }

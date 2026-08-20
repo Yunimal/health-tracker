@@ -1,0 +1,33 @@
+{
+  "input": {
+    "transcript": "배고파서 김밥 한 줄 사 먹었어.",
+    "recorded_at": "2026-08-19T13:00:00+09:00",
+    "dictionary": {}
+  },
+  "expected": {
+    "events": [
+      {
+        "category": "food",
+        "occurred_at": "2026-08-19T13:00:00+09:00",
+        "occurred_at_precision": "hour",
+        "payload": {
+          "name": "김밥",
+          "name_raw": "김밥",
+          "kind": "food",
+          "meal_type": "lunch",
+          "amount_text": "한 줄",
+          "amount_value": 1,
+          "amount_unit": "줄",
+          "completion_ratio": null,
+          "reason_text": "배고파서",
+          "reason": "hunger"
+        },
+        "confidence": 0.8,
+        "needs_review": false
+      }
+    ],
+    "hypotheses": [],
+    "unparsed": []
+  },
+  "_covers": ["경계: 섭취 이유로서의 배고픔 → food.reason=hunger, appetite 이벤트 없음 (R20 경계, R19 유지)", "'~서 먹었어' 결과=행동 → hypothesis 없음 (R1)"]
+}

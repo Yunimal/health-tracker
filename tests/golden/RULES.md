@@ -41,6 +41,23 @@ DRAFT.md 검토 결과 확정된 파싱 규칙. STEP 3 의 파싱 프롬프트(v
  목록을 열어두고 파서가 판단하게 하지 않는다 — 없는 가설을 만드는 것이
  놓치는 것보다 해롭다)
 
+### R1 보강 (DRAFT5, 두 가지)
+
+#### 동어반복은 가설이 아니다
+
+원인과 결과가 같은 사실의 두 표현이면 hypothesis 를 만들지 않는다.
+검증해서 새로 알게 될 것이 없으면 가설이 아니다.
+"아침을 안 먹어서 배고파" → 결식과 공복은 같은 사실이다. 가설 없음.
+(결식은 food 이벤트로, 배고픔은 appetite 이벤트로 각각 남는다)
+
+#### 지시어가 앞 문장을 가리키는 경우
+
+"그래서 그런지", "그것 때문인지" 처럼 원인이 앞 문장에 있으면
+앞 문장에서 실제 내용을 찾아 cause_hint 에 넣는다.
+지시어 자체를 cause_hint 에 넣지 마라.
+앞 문장에서도 원인을 찾을 수 없으면 hypothesis 를 만들지 않고
+결과만 fact 로 남긴다. 원인 모를 가설은 검증할 수 없다.
+
 ## R2. unparsed 는 쓰레기통이 아니다
 
 - 건강 신호이지만 현재 4개 카테고리(food/mood/sleep/energy)로 담을 수
@@ -53,11 +70,15 @@ DRAFT.md 검토 결과 확정된 파싱 규칙. STEP 3 의 파싱 프롬프트(v
 unparsed 의 목적은 Phase 2 에서 카테고리를 추가한 뒤 재파싱으로 되살리는
 것이다. 잡담이 섞이면 그 재파싱이 노이즈 청소 작업이 된다.
 
-## R3. 배고픔·식욕 → unparsed (mood 아님)
+## R3. 배고픔·식욕 → unparsed (mood 아님) — ⚠️ 폐기 (DRAFT5)
 
-배고픔은 감정도 각성 수준도 아니다. mood 에 넣으면 valence 축이 오염된다.
+**폐기됨:** appetite 카테고리(R20) 도입으로 배고픔·식욕·포만감은 이제 appetite 이벤트로 간다.
+더 이상 unparsed 로 보내지 않는다. (이력이 필요해 항목은 삭제하지 않고 남긴다)
+단 R19/R20 의 경계는 유지: 섭취 이유로 진술된 배고픔은 food.reason(appetite 아님).
+
+~~배고픔은 감정도 각성 수준도 아니다. mood 에 넣으면 valence 축이 오염된다.
 Phase 2 에서 appetite 카테고리를 추가할 1순위 후보이므로 unparsed 에
-원문을 남겨 복구 가능하게 한다.
+원문을 남겨 복구 가능하게 한다.~~
 
 ## R4. energy 와 mood 의 구분
 
@@ -235,8 +256,9 @@ payload:
   토끼똥·염소똥 1 / 딱딱함 2 / 약간 딱딱 3 / 보통·정상·괜찮음 4 /
   무름 5 / 묽음 6 / 물설사 7
   형태 묘사가 전혀 없으면 null.
-- 소화불량·더부룩·복부팽만은 bowel 이 아니다 → unparsed.
-  (배변 활동이 아니라 소화 증상이다. 잦으면 나중에 digestion 카테고리를 만든다)
+- 소화불량·더부룩·복부팽만은 bowel 이 아니다 → **digestion(R21)**. (배변 활동이 아니라 소화
+  감각이다.) ⚠️ DRAFT5 로 폐기: 예전엔 "→ unparsed" 였으나 digestion 카테고리 신설로 그리로 간다.
+  bowel(배변 활동)과 digestion(소화 감각)의 구분은 유지하고, 브리스톨 매핑 등 나머지는 그대로다.
 
 ## R16. medication — 약·영양제
 
@@ -348,11 +370,49 @@ reason enum 값을 화면에 노출하지 않는다. reason_text 만 보여준�
 "폭식" 같은 판단하는 말로 표시하지 않는다. 매일 보는 자기 기록에 판단 라벨이 붙으면
 관찰 도구가 아니라 자책 도구가 된다. (표시 원칙은 CLAUDE.md 에도 박아 둔다)
 
+## R20. appetite — 식욕·공복감
+
+payload:
+  kind: "hunger" | "fullness" | "craving" | "no_appetite"   (필수)
+  intensity_text: 원문 표현 또는 null      "너무 배고파", "살짝 출출"
+  controllable_text: 원문 표현 또는 null   "참을 만해", "못 참겠어"
+  note: 문자열 또는 null
+
+- 강도를 숫자로 매기지 않는다. 원문 표현을 보존한다. (R18 과 같은 원칙)
+- 판단하는 분류를 두지 않는다. "폭식", "과식", "중독" 같은 kind 를 만들지 마라.
+  사용자가 그렇게 말했으면 note 에 원문으로만 남는다. (CLAUDE.md 원칙 6)
+
+### food.reason 과의 경계 (가장 중요)
+
+배고픔이 섭취 행위에 붙어 있으면 food.reason, 독립된 상태 진술이면 appetite.
+같은 발화에서 하나의 배고픔 진술을 양쪽에 중복해서 넣지 않는다.
+
+  "배고파서 김밥 먹었어"  → food(reason=hunger) 만. appetite 없음
+  "지금 너무 배고파"       → appetite(hunger) 만
+  "배고파서 김밥 먹었는데 아직도 배고파"
+      → food(reason=hunger) + appetite(hunger)  ← 두 번째는 독립 진술
+
+## R21. digestion — 소화 감각
+
+payload:
+  kind: "gas" | "bloating" | "heartburn" | "pain" | "nausea" | "other"  (필수)
+  intensity_text: 원문 표현 또는 null
+  note: 문자열 또는 null
+
+- 강도를 숫자로 매기지 않는다.
+- 배변 활동(횟수·형태)은 bowel 이다. digestion 은 감각이다.
+
+## R22. 수면 중간 각성
+
+"새벽에 깼다", "자다가 깨서 화장실 감" 같은 중간 각성은
+sleep 이벤트의 interruptions 로 기록한다. unparsed 로 보내지 않는다.
+횟수가 명시되면 그 값을, "자꾸" 처럼 모호하면 null 로 두고 note 에 원문을 남긴다.
+
 ======================= 케이스별 확정 =======================
 
 | case | 항목 | 확정 |
 |---|---|---|
-| 001 | 배고픔 | unparsed (R3) |
+| 001 | 배고픔 | **appetite(hunger)** "배가 고파" (R20, R3 폐기). unparsed 아님 |
 | 001 | "졸려서 커피" | hypothesis 아님 (R1) |
 | 001 | 쿠크다스 meal_type | snack |
 | 001 | 아침 결식 | skipped_meal, name null (R11). amount 페널티 없음 → conf 0.80 (R6) |
@@ -362,7 +422,7 @@ reason enum 값을 화면에 노출하지 않는다. reason_text 만 보여준�
 | 005 | 등산 | **activity 이벤트** (R18). "지난 주말"→토요일 8/8 12:00 date. unparsed 에서 이동 |
 | 005 | 다리 뻐근함 | unparsed 유지. 근육통은 운동의 결과인 증상 (R18) |
 | 005 | 등산→다리 뻐근 | hypothesis 존치 (R1, "~와서"=인과). 등산은 activity 로 잡히고 뻐근함 원문만 unparsed |
-| 007 | 배고픔 | unparsed (R3) |
+| 007 | 배고픔 | **appetite(hunger)** "배는 좀 고픈데" (R20, R3 폐기). unparsed 아님 |
 | 007 | 점심 결식 | skipped_meal, name null (R11). amount 페널티 없음 → conf 0.80 (R6) |
 | 008 | 전체 | events / hypotheses / unparsed 모두 빈 배열 (R2) |
 | 009 | 아메리카노 2회 | 별도 이벤트 2건. 이름이 같아도 시각이 다르면 다른 사건 |
@@ -376,7 +436,7 @@ reason enum 값을 화면에 노출하지 않는다. reason_text 만 보여준�
 | 015 | 배변 2건 | 오늘(bristol 4) + 어제(bristol 2) |
 | 016 | 약 3건 | 유산균(taken) + 비타민D(taken) + 오메가3(skipped) |
 | 017 | 약 용량 변경 | medication(dose_change, 갑상선약, dose_from="반 알", dose_to="한 알") |
-| 018 | 혼재 | food(김치찌개) + menstrual(ongoing, cycle_day=2) + medication(taken, 유산균) + energy(피곤). "더부룩" → unparsed (R15) |
+| 018 | 혼재 | food(김치찌개) + menstrual(ongoing, cycle_day=2) + medication(taken, 유산균) + energy(피곤). "더부룩" → **digestion(bloating)** (R21, R15 소화 폐기). unparsed 아님 |
 | 019 | 시간 명시 운동 | activity(걷기), duration_min=30. "아침"→08:00 part_of_day (conf 0.80) |
 | 020 | 시간 없는 운동 | activity(산책), duration_min=null. "방금"→recorded_at exact (conf 1.00) |
 | 021 | 강도 표현 | activity(운동), intensity_text="빡세게" 원문 보존. 강도 숫자화 금지 (R18). "저녁"→19:00 part_of_day |
@@ -389,6 +449,16 @@ reason enum 값을 화면에 노출하지 않는다. reason_text 만 보여준�
 | 028 | 상황만, 이유 없음 | food(삼각김밥, reason=null, "하나" 1) @밤늦게 23:00. 야근/밤늦게로 hunger 를 **짐작 금지** (R19) |
 | 029 | 음식 여럿+이유 하나 | food×3(떡볶이/순대/튀김) 모두 reason=hunger "배고파서" @recorded 17:00 hour. 이유 하나가 전부에 귀속 (R19) |
 | 030 | 이유+기분 혼재 | food(매운 라면, reason=emotion "스트레스 받아서")+mood(후련, +1) @recorded 20:00. 스트레스는 mood 이벤트 아님, "후련"만 mood (R19/R4). "~서 먹었어" 결과=행동 → hypothesis 없음 (R1) |
+| 031 | 배고픔 강도 2단계 | appetite 2건 — 아침(hunger, intensity "살짝 출출") + 현재(hunger, "너무 배고파"). 시각 달라 별개 (R20) |
+| 032 | 참을 수 있는지 | appetite(hunger), controllable_text="참을 만해" (R20) |
+| 033 | 포만감+식욕없음 | appetite 2건 — fullness + no_appetite. 다른 감각이라 분리 (R20) |
+| 034 | 경계 | food(김밥, reason=hunger "배고파서") 만. **appetite 이벤트 없음** (R20 경계, R19 유지) |
+| 035 | 가스·더부룩 | digestion 2건 — gas + bloating. 분리 (R21) |
+| 036 | 속쓰림·명치통증 | digestion 2건 — heartburn + pain. 분리 (R21) |
+| 037 | 소화+음식 | food(떡볶이) + digestion(heartburn). "먹었는데"는 R1 닫힌 목록 밖 → hypothesis 없음 |
+| 038 | 수면 중간 각성 | sleep(interruptions=null, note "자꾸 깸"). **unparsed 아님** (R22). "자꾸"는 모호 → null |
+| 039 | 자명한 인과 | food(아침 결식) + appetite(hunger). **hypothesis 없음** (R1 동어반복: 결식=공복) |
+| 040 | 지시어 원인 | food(커피) + energy(졸림) + hypothesis(커피→졸림). cause_hint 에 "그래서" 아니라 "커피" (R1 지시어) |
 
 > case-023 은 hypothesis 를 만들지 않는다. "어제 등산 다녀왔는데 오늘 뻐근하네" 의 "~는데"는
 > R1 의 닫힌 인과 연결어 목록(~해서/~때문에/~라서/~인지/~탓에) 밖이고 비인과 용법이
@@ -433,3 +503,32 @@ DRAFT4 확정(food 섭취 동기):
   기존 001·007 변경 없음) · 이유 하나면 상황의 모든 음식에 귀속 · 이유로 쓰인 감정은 mood
   중복 생성 안 함 · reason enum 화면 비노출(reason_text 만). case-025~030 확정. 마이그레이션
   불필요(events.payload jsonb, 0007 이 앱 zod 검증 명시). schema.ts·index.ts zod·v8 프롬프트만 갱신.
+
+DRAFT5 확정(appetite / digestion 카테고리 + v9 버그 3종):
+
+- **R20** 신설(appetite): kind 4종(hunger/fullness/craving/no_appetite) · intensity/controllable
+  원문 보존(숫자화 금지) · 판단 라벨 금지 · food.reason 과의 경계(섭취 이유=food.reason /
+  독립 진술=appetite, 중복 금지).
+- **R21** 신설(digestion): kind 6종(gas/bloating/heartburn/pain/nausea/other) · 감각(소화)만,
+  배변 활동은 bowel.
+- **R3 폐기**(배고픔→appetite), **R15 소화 부분 폐기**(더부룩→digestion). 항목은 이력 보존용으로
+  남기고 폐기 표시. 기존 case-001/007(배고픔) → appetite, case-018(더부룩) → digestion 으로 갱신.
+- **R1 보강**: 동어반복 인과(결식=공복)는 hypothesis 만들지 않음 · 지시어("그래서 그런지")는
+  앞 문장에서 cause 를 찾아 cause_hint 에 넣고, 못 찾으면 hypothesis 없이 결과 fact 만.
+- **R22** 신설: 수면 중간 각성은 sleep.interruptions/note 로(unparsed 아님).
+- confidence(R6): appetite/digestion 은 amount 개념이 없어 페널티 없음(activity 처럼) — 코드는
+  이미 non-food 를 무페널티로 처리(confidence.ts), 변경 불필요. precision 페널티만 적용.
+- case-031~040 확정. 카테고리 10개로 확장(0009: events.category CHECK). schema.ts·index.ts zod·
+  v9 프롬프트 갱신. (payload 는 jsonb 라 payload 스키마 마이그레이션은 여전히 불필요)
+
+DRAFT5 미해결 (규칙이 아직 안 다루는 것 — 채우지 않고 남김):
+
+- **case-038 sleep quality:** 중간 각성만 있을 때(수면 질 단어 없음) quality 를 2(설침)로 볼지
+  null 로 둘지 미확정. 잠정 null 로 뒀다(R8 은 명시적 질 단어에만 적용, R22 는 interruptions/note
+  만 규정). 실사용에서 "깨서 못 잤다" 류가 자주 나오면 R8/R22 를 이어 확정.
+- **케이스 미확보 enum:** appetite `craving`(먹지 않고 충동만: "먹고 싶어 죽겠어")·digestion
+  `nausea`/`other` 는 규칙(enum)엔 있으나 골든 케이스가 없다. 실사용 데이터 확보되면 케이스 추가.
+- **R20 경계 3번째("배고파서 먹었는데 아직도 배고파" → food.reason + appetite 둘 다):** 규칙엔
+  명시했으나 전용 골든 케이스 없음. 과생성/누락이 의심되면 케이스로 못박는다.
+- **R1 보강② not-found 변형(앞 문장에서도 원인 못 찾음 → 결과 fact 만, 가설 없음):** 규칙엔
+  있으나 전용 골든 케이스 없음(040 은 found 케이스). 필요 시 추가.

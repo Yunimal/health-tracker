@@ -1,0 +1,40 @@
+{
+  "input": {
+    "transcript": "점심이 아직도 안 꺼진 느낌이야. 배부르고 저녁엔 통 입맛도 없네.",
+    "recorded_at": "2026-08-19T18:00:00+09:00",
+    "dictionary": {}
+  },
+  "expected": {
+    "events": [
+      {
+        "category": "appetite",
+        "occurred_at": "2026-08-19T18:00:00+09:00",
+        "occurred_at_precision": "hour",
+        "payload": {
+          "kind": "fullness",
+          "intensity_text": null,
+          "controllable_text": null,
+          "note": "점심이 아직도 안 꺼진 느낌"
+        },
+        "confidence": 0.8,
+        "needs_review": false
+      },
+      {
+        "category": "appetite",
+        "occurred_at": "2026-08-19T19:00:00+09:00",
+        "occurred_at_precision": "part_of_day",
+        "payload": {
+          "kind": "no_appetite",
+          "intensity_text": null,
+          "controllable_text": null,
+          "note": "저녁 입맛 없음"
+        },
+        "confidence": 0.8,
+        "needs_review": false
+      }
+    ],
+    "hypotheses": [],
+    "unparsed": []
+  },
+  "_covers": ["appetite fullness + no_appetite", "다른 감각이라 2건 분리 (R20)"]
+}

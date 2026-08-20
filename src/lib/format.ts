@@ -11,6 +11,8 @@ export const CATEGORY_LABEL: Record<Category, string> = {
   bowel: "배변",
   medication: "약",
   activity: "운동",
+  appetite: "식욕",
+  digestion: "소화",
 };
 
 /** 한글 라벨과 함께 쓰는 아이콘. 영어 코드명은 화면에 노출하지 않는다. */
@@ -23,6 +25,8 @@ export const CATEGORY_ICON: Record<Category, string> = {
   bowel: "🚽",
   medication: "💊",
   activity: "🏃",
+  appetite: "🥣",
+  digestion: "🌀",
 };
 
 const SOURCE_LABEL: Record<string, string> = { voice: "음성", text: "텍스트" };
@@ -240,6 +244,40 @@ export function summarizeEvent(category: Category, payload: Record<string, unkno
       if (dur != null) parts.push(`${dur}분`);
       const dist = num(p, "distance_km");
       if (dist != null) parts.push(`${dist}km`);
+      const intensity = str(p, "intensity_text");
+      if (intensity) parts.push(intensity);
+      const note = str(p, "note");
+      if (note) parts.push(note);
+      return parts.join(" · ");
+    }
+    case "appetite": {
+      // kind 는 중립 서술로만 푼다(판단 라벨 금지). 강도/조절은 원문 그대로. (R20)
+      const KIND: Record<string, string> = {
+        hunger: "배고픔",
+        fullness: "포만감",
+        craving: "먹고 싶음",
+        no_appetite: "식욕 없음",
+      };
+      const parts: string[] = [KIND[str(p, "kind") ?? ""] ?? "식욕"];
+      const intensity = str(p, "intensity_text");
+      if (intensity) parts.push(intensity);
+      const controllable = str(p, "controllable_text");
+      if (controllable) parts.push(controllable);
+      const note = str(p, "note");
+      if (note) parts.push(note);
+      return parts.join(" · ");
+    }
+    case "digestion": {
+      // 감각 종류를 중립 서술로. 강도는 원문 그대로. (R21)
+      const KIND: Record<string, string> = {
+        gas: "가스",
+        bloating: "더부룩",
+        heartburn: "속쓰림",
+        pain: "복통",
+        nausea: "메스꺼움",
+        other: "소화 불편",
+      };
+      const parts: string[] = [KIND[str(p, "kind") ?? ""] ?? "소화"];
       const intensity = str(p, "intensity_text");
       if (intensity) parts.push(intensity);
       const note = str(p, "note");

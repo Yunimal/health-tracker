@@ -1,0 +1,47 @@
+{
+  "input": {
+    "transcript": "어제 오후 늦게 커피를 마셨어. 그래서 그런지 오늘 하루 종일 너무 졸려.",
+    "recorded_at": "2026-08-19T15:00:00+09:00",
+    "dictionary": {}
+  },
+  "expected": {
+    "events": [
+      {
+        "category": "food",
+        "occurred_at": "2026-08-18T15:00:00+09:00",
+        "occurred_at_precision": "part_of_day",
+        "payload": {
+          "name": "커피",
+          "name_raw": "커피",
+          "kind": "drink",
+          "meal_type": null,
+          "amount_text": null,
+          "amount_value": null,
+          "amount_unit": null,
+          "completion_ratio": null,
+          "reason_text": null,
+          "reason": null
+        },
+        "confidence": 0.5,
+        "needs_review": true
+      },
+      {
+        "category": "energy",
+        "occurred_at": "2026-08-19T15:00:00+09:00",
+        "occurred_at_precision": "hour",
+        "payload": { "level": 2, "note": "하루 종일 너무 졸림" },
+        "confidence": 0.8,
+        "needs_review": false
+      }
+    ],
+    "hypotheses": [
+      {
+        "statement": "어제 오후 늦게 커피를 마셔서 그런지 오늘 하루 종일 너무 졸려",
+        "cause_hint": "어제 오후 늦게 커피 섭취",
+        "effect_hint": "졸림"
+      }
+    ],
+    "unparsed": []
+  },
+  "_covers": ["v9 버그: 지시어('그래서 그런지')가 앞 문장을 가리킴 → cause_hint 를 '커피'로 채움('그래서' 아님) (R1 지시어)", "food(커피)+energy(졸림)+hypothesis"]
+}

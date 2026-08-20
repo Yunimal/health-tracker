@@ -7,7 +7,16 @@
 // ── 공통 enum (SQL CHECK 제약과 동일) ──────────────────────────────────────
 export type Source = "voice" | "text";
 export type Category =
-  "food" | "mood" | "sleep" | "energy" | "menstrual" | "bowel" | "medication" | "activity";
+  | "food"
+  | "mood"
+  | "sleep"
+  | "energy"
+  | "menstrual"
+  | "bowel"
+  | "medication"
+  | "activity"
+  | "appetite"
+  | "digestion";
 export type OccurredAtPrecision = "exact" | "hour" | "part_of_day" | "date";
 export type HypothesisStatus = "open" | "supported" | "not_supported" | "dismissed";
 
@@ -110,6 +119,25 @@ export interface ActivityPayload {
   note: string | null;
 }
 
+// appetite — 식욕·공복감. (RULES R20) 강도는 숫자화하지 않고 원문 그대로. 판단 라벨 금지.
+export type AppetiteKind = "hunger" | "fullness" | "craving" | "no_appetite";
+
+export interface AppetitePayload {
+  kind: AppetiteKind;
+  intensity_text: string | null; // "너무 배고파", "살짝 출출". 숫자화하지 않는다.
+  controllable_text: string | null; // "참을 만해", "못 참겠어". 판단 라벨로 바꾸지 않는다.
+  note: string | null;
+}
+
+// digestion — 소화 감각. (RULES R21) 배변 활동(bowel)과 구분. 강도는 원문 그대로.
+export type DigestionKind = "gas" | "bloating" | "heartburn" | "pain" | "nausea" | "other";
+
+export interface DigestionPayload {
+  kind: DigestionKind;
+  intensity_text: string | null;
+  note: string | null;
+}
+
 export type EventPayload =
   | FoodPayload
   | MoodPayload
@@ -118,7 +146,9 @@ export type EventPayload =
   | MenstrualPayload
   | BowelPayload
   | MedicationPayload
-  | ActivityPayload;
+  | ActivityPayload
+  | AppetitePayload
+  | DigestionPayload;
 
 // ── raw_entries ────────────────────────────────────────────────────────────
 export interface RawEntry {
@@ -188,6 +218,14 @@ export interface ActivityEvent extends EventBase {
   category: "activity";
   payload: ActivityPayload;
 }
+export interface AppetiteEvent extends EventBase {
+  category: "appetite";
+  payload: AppetitePayload;
+}
+export interface DigestionEvent extends EventBase {
+  category: "digestion";
+  payload: DigestionPayload;
+}
 
 export type Event =
   | FoodEvent
@@ -197,7 +235,9 @@ export type Event =
   | MenstrualEvent
   | BowelEvent
   | MedicationEvent
-  | ActivityEvent;
+  | ActivityEvent
+  | AppetiteEvent
+  | DigestionEvent;
 
 // ── hypotheses ─────────────────────────────────────────────────────────────
 export interface Hypothesis {

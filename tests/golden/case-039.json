@@ -1,0 +1,46 @@
+{
+  "input": {
+    "transcript": "아침을 안 먹어서 그런지 지금 너무 배고파.",
+    "recorded_at": "2026-08-19T11:00:00+09:00",
+    "dictionary": {}
+  },
+  "expected": {
+    "events": [
+      {
+        "category": "food",
+        "occurred_at": "2026-08-19T08:00:00+09:00",
+        "occurred_at_precision": "part_of_day",
+        "payload": {
+          "name": null,
+          "name_raw": null,
+          "kind": "skipped_meal",
+          "meal_type": "breakfast",
+          "amount_text": null,
+          "amount_value": null,
+          "amount_unit": null,
+          "completion_ratio": null,
+          "reason_text": null,
+          "reason": null
+        },
+        "confidence": 0.8,
+        "needs_review": false
+      },
+      {
+        "category": "appetite",
+        "occurred_at": "2026-08-19T11:00:00+09:00",
+        "occurred_at_precision": "exact",
+        "payload": {
+          "kind": "hunger",
+          "intensity_text": "너무 배고파",
+          "controllable_text": null,
+          "note": null
+        },
+        "confidence": 1.0,
+        "needs_review": false
+      }
+    ],
+    "hypotheses": [],
+    "unparsed": []
+  },
+  "_covers": ["v9 버그: 자명한 인과(결식=공복은 같은 사실) → hypothesis 없음 (R1 동어반복)", "food(결식 breakfast) + appetite(hunger '너무 배고파')"]
+}

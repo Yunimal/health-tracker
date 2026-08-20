@@ -1,0 +1,45 @@
+{
+  "input": {
+    "transcript": "점심에 매운 떡볶이 먹었는데 속이 계속 쓰려.",
+    "recorded_at": "2026-08-19T14:00:00+09:00",
+    "dictionary": {}
+  },
+  "expected": {
+    "events": [
+      {
+        "category": "food",
+        "occurred_at": "2026-08-19T12:30:00+09:00",
+        "occurred_at_precision": "part_of_day",
+        "payload": {
+          "name": "매운 떡볶이",
+          "name_raw": "매운 떡볶이",
+          "kind": "food",
+          "meal_type": "lunch",
+          "amount_text": null,
+          "amount_value": null,
+          "amount_unit": null,
+          "completion_ratio": null,
+          "reason_text": null,
+          "reason": null
+        },
+        "confidence": 0.5,
+        "needs_review": true
+      },
+      {
+        "category": "digestion",
+        "occurred_at": "2026-08-19T14:00:00+09:00",
+        "occurred_at_precision": "hour",
+        "payload": {
+          "kind": "heartburn",
+          "intensity_text": null,
+          "note": "속이 계속 쓰림"
+        },
+        "confidence": 0.8,
+        "needs_review": false
+      }
+    ],
+    "hypotheses": [],
+    "unparsed": []
+  },
+  "_covers": ["food(매운 떡볶이) + digestion(heartburn) 공존", "'~는데'는 R1 닫힌 목록 밖 → hypothesis 없음"]
+}

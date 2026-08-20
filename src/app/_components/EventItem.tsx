@@ -39,6 +39,7 @@ const FIELD_LABEL: Record<string, string> = {
   duration_min: "시간(분)",
   distance_km: "거리(km)",
   intensity_text: "강도(원문)",
+  controllable_text: "참을 수 있는지(원문)",
 };
 
 const CATEGORIES: Category[] = [
@@ -50,6 +51,8 @@ const CATEGORIES: Category[] = [
   "bowel",
   "medication",
   "activity",
+  "appetite",
+  "digestion",
 ];
 
 /** occurred_at(ISO, 대개 UTC) ↔ datetime-local. 입력창은 KST 벽시계로 취급한다. */
@@ -101,6 +104,15 @@ function initFields(category: Category, p: Record<string, unknown>): Fields {
         intensity_text: s("intensity_text"),
         note: s("note"),
       };
+    case "appetite":
+      return {
+        kind: s("kind"),
+        intensity_text: s("intensity_text"),
+        controllable_text: s("controllable_text"),
+        note: s("note"),
+      };
+    case "digestion":
+      return { kind: s("kind"), intensity_text: s("intensity_text"), note: s("note") };
   }
 }
 
@@ -168,6 +180,21 @@ function buildPayload(
         name: f.name ?? "",
         duration_min: numOrNull(f.duration_min!),
         distance_km: numOrNull(f.distance_km!),
+        intensity_text: strOrNull(f.intensity_text!),
+        note: strOrNull(f.note!),
+      };
+    case "appetite":
+      return {
+        ...base,
+        kind: f.kind || "hunger",
+        intensity_text: strOrNull(f.intensity_text!),
+        controllable_text: strOrNull(f.controllable_text!),
+        note: strOrNull(f.note!),
+      };
+    case "digestion":
+      return {
+        ...base,
+        kind: f.kind || "other",
         intensity_text: strOrNull(f.intensity_text!),
         note: strOrNull(f.note!),
       };

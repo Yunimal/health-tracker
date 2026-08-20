@@ -1,0 +1,38 @@
+{
+  "input": {
+    "transcript": "아침부터 속이 쓰리고 명치가 아파.",
+    "recorded_at": "2026-08-19T09:00:00+09:00",
+    "dictionary": {}
+  },
+  "expected": {
+    "events": [
+      {
+        "category": "digestion",
+        "occurred_at": "2026-08-19T08:00:00+09:00",
+        "occurred_at_precision": "part_of_day",
+        "payload": {
+          "kind": "heartburn",
+          "intensity_text": null,
+          "note": "속이 쓰림"
+        },
+        "confidence": 0.8,
+        "needs_review": false
+      },
+      {
+        "category": "digestion",
+        "occurred_at": "2026-08-19T08:00:00+09:00",
+        "occurred_at_precision": "part_of_day",
+        "payload": {
+          "kind": "pain",
+          "intensity_text": null,
+          "note": "명치가 아픔"
+        },
+        "confidence": 0.8,
+        "needs_review": false
+      }
+    ],
+    "hypotheses": [],
+    "unparsed": []
+  },
+  "_covers": ["digestion heartburn + pain 2건 분리 (R21)", "'아침' → 08:00 part_of_day (R6)"]
+}

@@ -10,6 +10,7 @@ import { PROMPT_V5 } from "./prompts/v5";
 import { PROMPT_V6 } from "./prompts/v6";
 import { PROMPT_V7 } from "./prompts/v7";
 import { PROMPT_V8 } from "./prompts/v8";
+import { PROMPT_V9 } from "./prompts/v9";
 import type { Category, OccurredAtPrecision } from "@/lib/db/schema";
 
 /**
@@ -22,11 +23,12 @@ import type { Category, OccurredAtPrecision } from "@/lib/db/schema";
 /** 파싱 모델은 env(PARSE_MODEL)로 오버라이드. 기본값은 env.parseModel() 참고. */
 
 /** 프롬프트 파일명과 동기화한다. 프롬프트를 고치면 prompts/vN.ts 를 새로 만들고 이 값을 올린다. */
-export const PARSE_VERSION = "v8";
+export const PARSE_VERSION = "v9";
 
-// 출력 한도. 사고(thinking)는 꺼도(아래 callModel) 이벤트가 많은 원문은 4096 을 넘을 수 있어
-// 8192 로 둔다. 출력 토큰은 실제 생성한 만큼만 과금되므로 한도 상향에 비용 부담은 없다.
-const MAX_TOKENS = 8192;
+// 출력 한도. 사고(thinking)는 꺼도(아래 callModel) 이벤트가 많은 원문은 출력이 길어진다 —
+// 카테고리 10개 + payload 필드 확장으로 이벤트당 출력이 늘어, 13건짜리 원문에서 11,779자가
+// 8192 토큰을 넘겼다. 16384 로 둔다. 출력 토큰은 실제 생성분만 과금되므로 한도 상향에 비용 부담 없음.
+const MAX_TOKENS = 16384;
 
 // 실제 Anthropic API 호출 횟수(재시도 포함). 골든 채점에서 호출 수를 콘솔에 찍는다.
 let apiCallCount = 0;
@@ -119,6 +121,21 @@ const activityPayloadSchema = z.object({
   note: z.string().nullable(),
 });
 
+// appetite — 식욕·공복감. (R20) 강도/조절가능성은 숫자화하지 않고 원문 그대로.
+const appetitePayloadSchema = z.object({
+  kind: z.enum(["hunger", "fullness", "craving", "no_appetite"]),
+  intensity_text: z.string().nullable(),
+  controllable_text: z.string().nullable(),
+  note: z.string().nullable(),
+});
+
+// digestion — 소화 감각. (R21) 배변 활동(bowel)과 구분.
+const digestionPayloadSchema = z.object({
+  kind: z.enum(["gas", "bloating", "heartburn", "pain", "nausea", "other"]),
+  intensity_text: z.string().nullable(),
+  note: z.string().nullable(),
+});
+
 const eventBase = {
   occurred_at: z.string(),
   occurred_at_precision: precisionSchema,
@@ -134,6 +151,8 @@ const llmEventSchema = z.discriminatedUnion("category", [
   z.object({ category: z.literal("bowel"), payload: bowelPayloadSchema, ...eventBase }),
   z.object({ category: z.literal("medication"), payload: medicationPayloadSchema, ...eventBase }),
   z.object({ category: z.literal("activity"), payload: activityPayloadSchema, ...eventBase }),
+  z.object({ category: z.literal("appetite"), payload: appetitePayloadSchema, ...eventBase }),
+  z.object({ category: z.literal("digestion"), payload: digestionPayloadSchema, ...eventBase }),
 ]);
 
 const hypothesisSchema = z.object({
@@ -185,6 +204,7 @@ const PROMPTS: Record<string, string> = {
   v6: PROMPT_V6,
   v7: PROMPT_V7,
   v8: PROMPT_V8,
+  v9: PROMPT_V9,
 };
 
 function loadSystemPrompt(version: string): string {

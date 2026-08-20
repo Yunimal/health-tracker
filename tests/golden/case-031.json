@@ -1,0 +1,40 @@
+{
+  "input": {
+    "transcript": "아침엔 살짝 출출한 정도였는데 지금은 진짜 너무 배고파.",
+    "recorded_at": "2026-08-19T12:00:00+09:00",
+    "dictionary": {}
+  },
+  "expected": {
+    "events": [
+      {
+        "category": "appetite",
+        "occurred_at": "2026-08-19T08:00:00+09:00",
+        "occurred_at_precision": "part_of_day",
+        "payload": {
+          "kind": "hunger",
+          "intensity_text": "살짝 출출",
+          "controllable_text": null,
+          "note": null
+        },
+        "confidence": 0.8,
+        "needs_review": false
+      },
+      {
+        "category": "appetite",
+        "occurred_at": "2026-08-19T12:00:00+09:00",
+        "occurred_at_precision": "exact",
+        "payload": {
+          "kind": "hunger",
+          "intensity_text": "너무 배고파",
+          "controllable_text": null,
+          "note": null
+        },
+        "confidence": 1.0,
+        "needs_review": false
+      }
+    ],
+    "hypotheses": [],
+    "unparsed": []
+  },
+  "_covers": ["appetite hunger 강도 두 단계(살짝 출출/너무 배고파)", "intensity_text 원문 보존", "시각 달라 별개 이벤트", "'~는데' 비인과 → hypothesis 없음 (R20/R1)"]
+}
