@@ -1,0 +1,22 @@
+{
+  "input": {
+    "transcript": "오늘 오전에 집중이 아주 잘 됐어. 완전 몰입했어.",
+    "recorded_at": "2026-08-23T13:00:00+09:00",
+    "dictionary": {}
+  },
+  "expected": {
+    "events": [
+      {
+        "category": "focus",
+        "occurred_at": "2026-08-23T09:00:00+09:00",
+        "occurred_at_precision": "part_of_day",
+        "payload": { "level": 5, "note": "집중이 아주 잘 됐고 완전 몰입함" },
+        "confidence": 0.8,
+        "needs_review": false
+      }
+    ],
+    "hypotheses": [],
+    "unparsed": []
+  },
+  "_covers": ["focus 1건, level=5 (같은 축 중복 서술 → 합침, 더 강한 값) (R25)", "원문 전체는 note 에. \"오전\" → 09:00 part_of_day"]
+}

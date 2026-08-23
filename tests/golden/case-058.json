@@ -1,0 +1,33 @@
+{
+  "input": {
+    "transcript": "오늘 물을 평소보다 많이 마셨어.",
+    "recorded_at": "2026-08-23T20:00:00+09:00",
+    "dictionary": {}
+  },
+  "expected": {
+    "events": [
+      {
+        "category": "food",
+        "occurred_at": "2026-08-23T20:00:00+09:00",
+        "occurred_at_precision": "hour",
+        "payload": {
+          "name": "물",
+          "name_raw": "물",
+          "kind": "drink",
+          "meal_type": null,
+          "amount_text": "많이",
+          "amount_value": null,
+          "amount_unit": null,
+          "completion_ratio": null,
+          "reason_text": null,
+          "reason": null
+        },
+        "confidence": 0.5,
+        "needs_review": true
+      }
+    ],
+    "hypotheses": [],
+    "unparsed": []
+  },
+  "_covers": ["물 → food(kind=drink)로 잡힘(기존 기능 검증, 새 카테고리 아님)", "\"많이\" 모호 → amount_value null, amount_text 보존 → conf 0.5 (R5/R6)"]
+}

@@ -12,7 +12,23 @@
         "occurred_at_precision": "hour",
         "payload": {
           "part": "skin",
-          "description_text": "피부가 매끈해지고 트러블도 많이 가라앉음",
+          "description_text": "피부가 확실히 매끈해짐",
+          "since_text": null,
+          "self_rating": null,
+          "rating_scale": null,
+          "note": null
+        },
+        "confidence": 0.8,
+        "needs_review": false
+      },
+      {
+        "category": "body_condition",
+        "occurred_at": "2026-08-23T10:00:00+09:00",
+        "occurred_at_precision": "hour",
+        "payload": {
+          "part": "skin",
+          "description_text": "트러블도 많이 가라앉음",
+          "since_text": null,
           "self_rating": null,
           "rating_scale": null,
           "note": null
@@ -24,5 +40,5 @@
     "hypotheses": [],
     "unparsed": []
   },
-  "_covers": ["body_condition skin — 피부 좋아짐도 관찰로 남긴다(방향 필드 없이 원문으로) (R23)", "같은 개선 서술 1건"]
+  "_covers": ["body_condition skin 2건 — 질감(매끈)과 트러블은 다른 관찰이라 분리 (R23 보강)", "개선도 관찰로 남긴다(방향 판정 안 함)"]
 }

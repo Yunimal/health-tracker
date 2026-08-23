@@ -1,0 +1,36 @@
+{
+  "input": {
+    "transcript": "어젯밤 12시에 누워서 아침 7시에 일어났어. 에어컨 켜고 잤어.",
+    "recorded_at": "2026-08-23T08:00:00+09:00",
+    "dictionary": {}
+  },
+  "expected": {
+    "events": [
+      {
+        "category": "sleep",
+        "occurred_at": "2026-08-23T00:00:00+09:00",
+        "occurred_at_precision": "hour",
+        "payload": {
+          "bedtime": "2026-08-23T00:00:00+09:00",
+          "wake_time": "2026-08-23T07:00:00+09:00",
+          "quality": null,
+          "interruptions": null,
+          "note": null
+        },
+        "confidence": 0.8,
+        "needs_review": false
+      },
+      {
+        "category": "environment",
+        "occurred_at": "2026-08-23T00:00:00+09:00",
+        "occurred_at_precision": "hour",
+        "payload": { "kind": "sleep", "description_text": "에어컨 켜고 잤어", "note": null },
+        "confidence": 0.8,
+        "needs_review": false
+      }
+    ],
+    "hypotheses": [],
+    "unparsed": []
+  },
+  "_covers": ["sleep bedtime 00:00 / wake_time 07:00 채워짐(기존 기능 검증)", "environment kind=sleep 별도 이벤트(sleep note 아님) (R26)"]
+}

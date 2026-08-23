@@ -1,0 +1,1630 @@
+{
+  "parse_version": "v11",
+  "model": "claude-sonnet-5",
+  "generated_at": "2026-08-23T07:08:11.594Z",
+  "case_count": 60,
+  "totals": {
+    "events_expected": 109,
+    "events_actual": 108,
+    "events_matched": 105,
+    "events_missed": 4,
+    "events_extra": 3,
+    "detection_recall": 0.963302752293578,
+    "detection_precision": 0.9722222222222222,
+    "detection_f1": 0.9677419354838711,
+    "category_correct": 105,
+    "category_accuracy": 1,
+    "occurred_at_within_tol": 105,
+    "occurred_at_pass_rate": 1,
+    "hypotheses_expected": 7,
+    "hypotheses_actual": 7,
+    "hypotheses_matched": 7,
+    "hypothesis_misclassifications": 0,
+    "fewshot_overlap_count": 23
+  },
+  "cases": [
+    {
+      "name": "case-001",
+      "fewShotOverlap": true,
+      "events": {
+        "expected": 7,
+        "actual": 7,
+        "matched": 7,
+        "missed": 0,
+        "extra": 0,
+        "categoryCorrect": 7,
+        "withinTolerance": 7,
+        "missedEvents": [],
+        "extraEvents": [],
+        "categoryErrors": [],
+        "timeErrors": []
+      },
+      "hypotheses": {
+        "expected": 1,
+        "actual": 1,
+        "matched": 1,
+        "misclassifications": 0,
+        "missing": [],
+        "spurious": []
+      }
+    },
+    {
+      "name": "case-002",
+      "fewShotOverlap": true,
+      "events": {
+        "expected": 5,
+        "actual": 5,
+        "matched": 5,
+        "missed": 0,
+        "extra": 0,
+        "categoryCorrect": 5,
+        "withinTolerance": 5,
+        "missedEvents": [],
+        "extraEvents": [],
+        "categoryErrors": [],
+        "timeErrors": []
+      },
+      "hypotheses": {
+        "expected": 1,
+        "actual": 1,
+        "matched": 1,
+        "misclassifications": 0,
+        "missing": [],
+        "spurious": []
+      }
+    },
+    {
+      "name": "case-003",
+      "fewShotOverlap": false,
+      "events": {
+        "expected": 2,
+        "actual": 2,
+        "matched": 2,
+        "missed": 0,
+        "extra": 0,
+        "categoryCorrect": 2,
+        "withinTolerance": 2,
+        "missedEvents": [],
+        "extraEvents": [],
+        "categoryErrors": [],
+        "timeErrors": []
+      },
+      "hypotheses": {
+        "expected": 1,
+        "actual": 1,
+        "matched": 1,
+        "misclassifications": 0,
+        "missing": [],
+        "spurious": []
+      }
+    },
+    {
+      "name": "case-004",
+      "fewShotOverlap": false,
+      "events": {
+        "expected": 2,
+        "actual": 2,
+        "matched": 2,
+        "missed": 0,
+        "extra": 0,
+        "categoryCorrect": 2,
+        "withinTolerance": 2,
+        "missedEvents": [],
+        "extraEvents": [],
+        "categoryErrors": [],
+        "timeErrors": []
+      },
+      "hypotheses": {
+        "expected": 1,
+        "actual": 1,
+        "matched": 1,
+        "misclassifications": 0,
+        "missing": [],
+        "spurious": []
+      }
+    },
+    {
+      "name": "case-005",
+      "fewShotOverlap": true,
+      "events": {
+        "expected": 2,
+        "actual": 2,
+        "matched": 2,
+        "missed": 0,
+        "extra": 0,
+        "categoryCorrect": 2,
+        "withinTolerance": 2,
+        "missedEvents": [],
+        "extraEvents": [],
+        "categoryErrors": [],
+        "timeErrors": []
+      },
+      "hypotheses": {
+        "expected": 1,
+        "actual": 1,
+        "matched": 1,
+        "misclassifications": 0,
+        "missing": [],
+        "spurious": []
+      }
+    },
+    {
+      "name": "case-006",
+      "fewShotOverlap": false,
+      "events": {
+        "expected": 3,
+        "actual": 3,
+        "matched": 3,
+        "missed": 0,
+        "extra": 0,
+        "categoryCorrect": 3,
+        "withinTolerance": 3,
+        "missedEvents": [],
+        "extraEvents": [],
+        "categoryErrors": [],
+        "timeErrors": []
+      },
+      "hypotheses": {
+        "expected": 0,
+        "actual": 0,
+        "matched": 0,
+        "misclassifications": 0,
+        "missing": [],
+        "spurious": []
+      }
+    },
+    {
+      "name": "case-007",
+      "fewShotOverlap": false,
+      "events": {
+        "expected": 2,
+        "actual": 2,
+        "matched": 2,
+        "missed": 0,
+        "extra": 0,
+        "categoryCorrect": 2,
+        "withinTolerance": 2,
+        "missedEvents": [],
+        "extraEvents": [],
+        "categoryErrors": [],
+        "timeErrors": []
+      },
+      "hypotheses": {
+        "expected": 0,
+        "actual": 0,
+        "matched": 0,
+        "misclassifications": 0,
+        "missing": [],
+        "spurious": []
+      }
+    },
+    {
+      "name": "case-008",
+      "fewShotOverlap": true,
+      "events": {
+        "expected": 0,
+        "actual": 0,
+        "matched": 0,
+        "missed": 0,
+        "extra": 0,
+        "categoryCorrect": 0,
+        "withinTolerance": 0,
+        "missedEvents": [],
+        "extraEvents": [],
+        "categoryErrors": [],
+        "timeErrors": []
+      },
+      "hypotheses": {
+        "expected": 0,
+        "actual": 0,
+        "matched": 0,
+        "misclassifications": 0,
+        "missing": [],
+        "spurious": []
+      }
+    },
+    {
+      "name": "case-009",
+      "fewShotOverlap": true,
+      "events": {
+        "expected": 3,
+        "actual": 3,
+        "matched": 3,
+        "missed": 0,
+        "extra": 0,
+        "categoryCorrect": 3,
+        "withinTolerance": 3,
+        "missedEvents": [],
+        "extraEvents": [],
+        "categoryErrors": [],
+        "timeErrors": []
+      },
+      "hypotheses": {
+        "expected": 0,
+        "actual": 0,
+        "matched": 0,
+        "misclassifications": 0,
+        "missing": [],
+        "spurious": []
+      }
+    },
+    {
+      "name": "case-010",
+      "fewShotOverlap": false,
+      "events": {
+        "expected": 1,
+        "actual": 1,
+        "matched": 1,
+        "missed": 0,
+        "extra": 0,
+        "categoryCorrect": 1,
+        "withinTolerance": 1,
+        "missedEvents": [],
+        "extraEvents": [],
+        "categoryErrors": [],
+        "timeErrors": []
+      },
+      "hypotheses": {
+        "expected": 0,
+        "actual": 0,
+        "matched": 0,
+        "misclassifications": 0,
+        "missing": [],
+        "spurious": []
+      }
+    },
+    {
+      "name": "case-011",
+      "fewShotOverlap": false,
+      "events": {
+        "expected": 1,
+        "actual": 1,
+        "matched": 1,
+        "missed": 0,
+        "extra": 0,
+        "categoryCorrect": 1,
+        "withinTolerance": 1,
+        "missedEvents": [],
+        "extraEvents": [],
+        "categoryErrors": [],
+        "timeErrors": []
+      },
+      "hypotheses": {
+        "expected": 0,
+        "actual": 0,
+        "matched": 0,
+        "misclassifications": 0,
+        "missing": [],
+        "spurious": []
+      }
+    },
+    {
+      "name": "case-012",
+      "fewShotOverlap": true,
+      "events": {
+        "expected": 2,
+        "actual": 2,
+        "matched": 2,
+        "missed": 0,
+        "extra": 0,
+        "categoryCorrect": 2,
+        "withinTolerance": 2,
+        "missedEvents": [],
+        "extraEvents": [],
+        "categoryErrors": [],
+        "timeErrors": []
+      },
+      "hypotheses": {
+        "expected": 0,
+        "actual": 0,
+        "matched": 0,
+        "misclassifications": 0,
+        "missing": [],
+        "spurious": []
+      }
+    },
+    {
+      "name": "case-013",
+      "fewShotOverlap": true,
+      "events": {
+        "expected": 2,
+        "actual": 2,
+        "matched": 2,
+        "missed": 0,
+        "extra": 0,
+        "categoryCorrect": 2,
+        "withinTolerance": 2,
+        "missedEvents": [],
+        "extraEvents": [],
+        "categoryErrors": [],
+        "timeErrors": []
+      },
+      "hypotheses": {
+        "expected": 1,
+        "actual": 1,
+        "matched": 1,
+        "misclassifications": 0,
+        "missing": [],
+        "spurious": []
+      }
+    },
+    {
+      "name": "case-014",
+      "fewShotOverlap": true,
+      "events": {
+        "expected": 2,
+        "actual": 2,
+        "matched": 2,
+        "missed": 0,
+        "extra": 0,
+        "categoryCorrect": 2,
+        "withinTolerance": 2,
+        "missedEvents": [],
+        "extraEvents": [],
+        "categoryErrors": [],
+        "timeErrors": []
+      },
+      "hypotheses": {
+        "expected": 0,
+        "actual": 0,
+        "matched": 0,
+        "misclassifications": 0,
+        "missing": [],
+        "spurious": []
+      }
+    },
+    {
+      "name": "case-015",
+      "fewShotOverlap": false,
+      "events": {
+        "expected": 2,
+        "actual": 2,
+        "matched": 2,
+        "missed": 0,
+        "extra": 0,
+        "categoryCorrect": 2,
+        "withinTolerance": 2,
+        "missedEvents": [],
+        "extraEvents": [],
+        "categoryErrors": [],
+        "timeErrors": []
+      },
+      "hypotheses": {
+        "expected": 0,
+        "actual": 0,
+        "matched": 0,
+        "misclassifications": 0,
+        "missing": [],
+        "spurious": []
+      }
+    },
+    {
+      "name": "case-016",
+      "fewShotOverlap": true,
+      "events": {
+        "expected": 3,
+        "actual": 3,
+        "matched": 3,
+        "missed": 0,
+        "extra": 0,
+        "categoryCorrect": 3,
+        "withinTolerance": 3,
+        "missedEvents": [],
+        "extraEvents": [],
+        "categoryErrors": [],
+        "timeErrors": []
+      },
+      "hypotheses": {
+        "expected": 0,
+        "actual": 0,
+        "matched": 0,
+        "misclassifications": 0,
+        "missing": [],
+        "spurious": []
+      }
+    },
+    {
+      "name": "case-017",
+      "fewShotOverlap": false,
+      "events": {
+        "expected": 1,
+        "actual": 1,
+        "matched": 1,
+        "missed": 0,
+        "extra": 0,
+        "categoryCorrect": 1,
+        "withinTolerance": 1,
+        "missedEvents": [],
+        "extraEvents": [],
+        "categoryErrors": [],
+        "timeErrors": []
+      },
+      "hypotheses": {
+        "expected": 0,
+        "actual": 0,
+        "matched": 0,
+        "misclassifications": 0,
+        "missing": [],
+        "spurious": []
+      }
+    },
+    {
+      "name": "case-018",
+      "fewShotOverlap": true,
+      "events": {
+        "expected": 5,
+        "actual": 4,
+        "matched": 4,
+        "missed": 1,
+        "extra": 0,
+        "categoryCorrect": 4,
+        "withinTolerance": 4,
+        "missedEvents": [
+          {
+            "category": "digestion",
+            "occurred_at": "2026-08-12T15:30:00+09:00"
+          }
+        ],
+        "extraEvents": [],
+        "categoryErrors": [],
+        "timeErrors": []
+      },
+      "hypotheses": {
+        "expected": 0,
+        "actual": 0,
+        "matched": 0,
+        "misclassifications": 0,
+        "missing": [],
+        "spurious": []
+      }
+    },
+    {
+      "name": "case-019",
+      "fewShotOverlap": false,
+      "events": {
+        "expected": 1,
+        "actual": 1,
+        "matched": 1,
+        "missed": 0,
+        "extra": 0,
+        "categoryCorrect": 1,
+        "withinTolerance": 1,
+        "missedEvents": [],
+        "extraEvents": [],
+        "categoryErrors": [],
+        "timeErrors": []
+      },
+      "hypotheses": {
+        "expected": 0,
+        "actual": 0,
+        "matched": 0,
+        "misclassifications": 0,
+        "missing": [],
+        "spurious": []
+      }
+    },
+    {
+      "name": "case-020",
+      "fewShotOverlap": false,
+      "events": {
+        "expected": 1,
+        "actual": 1,
+        "matched": 1,
+        "missed": 0,
+        "extra": 0,
+        "categoryCorrect": 1,
+        "withinTolerance": 1,
+        "missedEvents": [],
+        "extraEvents": [],
+        "categoryErrors": [],
+        "timeErrors": []
+      },
+      "hypotheses": {
+        "expected": 0,
+        "actual": 0,
+        "matched": 0,
+        "misclassifications": 0,
+        "missing": [],
+        "spurious": []
+      }
+    },
+    {
+      "name": "case-021",
+      "fewShotOverlap": false,
+      "events": {
+        "expected": 1,
+        "actual": 1,
+        "matched": 1,
+        "missed": 0,
+        "extra": 0,
+        "categoryCorrect": 1,
+        "withinTolerance": 1,
+        "missedEvents": [],
+        "extraEvents": [],
+        "categoryErrors": [],
+        "timeErrors": []
+      },
+      "hypotheses": {
+        "expected": 0,
+        "actual": 0,
+        "matched": 0,
+        "misclassifications": 0,
+        "missing": [],
+        "spurious": []
+      }
+    },
+    {
+      "name": "case-022",
+      "fewShotOverlap": true,
+      "events": {
+        "expected": 2,
+        "actual": 2,
+        "matched": 2,
+        "missed": 0,
+        "extra": 0,
+        "categoryCorrect": 2,
+        "withinTolerance": 2,
+        "missedEvents": [],
+        "extraEvents": [],
+        "categoryErrors": [],
+        "timeErrors": []
+      },
+      "hypotheses": {
+        "expected": 0,
+        "actual": 0,
+        "matched": 0,
+        "misclassifications": 0,
+        "missing": [],
+        "spurious": []
+      }
+    },
+    {
+      "name": "case-023",
+      "fewShotOverlap": false,
+      "events": {
+        "expected": 1,
+        "actual": 1,
+        "matched": 1,
+        "missed": 0,
+        "extra": 0,
+        "categoryCorrect": 1,
+        "withinTolerance": 1,
+        "missedEvents": [],
+        "extraEvents": [],
+        "categoryErrors": [],
+        "timeErrors": []
+      },
+      "hypotheses": {
+        "expected": 0,
+        "actual": 0,
+        "matched": 0,
+        "misclassifications": 0,
+        "missing": [],
+        "spurious": []
+      }
+    },
+    {
+      "name": "case-024",
+      "fewShotOverlap": true,
+      "events": {
+        "expected": 0,
+        "actual": 0,
+        "matched": 0,
+        "missed": 0,
+        "extra": 0,
+        "categoryCorrect": 0,
+        "withinTolerance": 0,
+        "missedEvents": [],
+        "extraEvents": [],
+        "categoryErrors": [],
+        "timeErrors": []
+      },
+      "hypotheses": {
+        "expected": 0,
+        "actual": 0,
+        "matched": 0,
+        "misclassifications": 0,
+        "missing": [],
+        "spurious": []
+      }
+    },
+    {
+      "name": "case-025",
+      "fewShotOverlap": false,
+      "events": {
+        "expected": 2,
+        "actual": 2,
+        "matched": 2,
+        "missed": 0,
+        "extra": 0,
+        "categoryCorrect": 2,
+        "withinTolerance": 2,
+        "missedEvents": [],
+        "extraEvents": [],
+        "categoryErrors": [],
+        "timeErrors": []
+      },
+      "hypotheses": {
+        "expected": 0,
+        "actual": 0,
+        "matched": 0,
+        "misclassifications": 0,
+        "missing": [],
+        "spurious": []
+      }
+    },
+    {
+      "name": "case-026",
+      "fewShotOverlap": false,
+      "events": {
+        "expected": 1,
+        "actual": 1,
+        "matched": 1,
+        "missed": 0,
+        "extra": 0,
+        "categoryCorrect": 1,
+        "withinTolerance": 1,
+        "missedEvents": [],
+        "extraEvents": [],
+        "categoryErrors": [],
+        "timeErrors": []
+      },
+      "hypotheses": {
+        "expected": 0,
+        "actual": 0,
+        "matched": 0,
+        "misclassifications": 0,
+        "missing": [],
+        "spurious": []
+      }
+    },
+    {
+      "name": "case-027",
+      "fewShotOverlap": false,
+      "events": {
+        "expected": 2,
+        "actual": 2,
+        "matched": 2,
+        "missed": 0,
+        "extra": 0,
+        "categoryCorrect": 2,
+        "withinTolerance": 2,
+        "missedEvents": [],
+        "extraEvents": [],
+        "categoryErrors": [],
+        "timeErrors": []
+      },
+      "hypotheses": {
+        "expected": 0,
+        "actual": 0,
+        "matched": 0,
+        "misclassifications": 0,
+        "missing": [],
+        "spurious": []
+      }
+    },
+    {
+      "name": "case-028",
+      "fewShotOverlap": true,
+      "events": {
+        "expected": 1,
+        "actual": 1,
+        "matched": 1,
+        "missed": 0,
+        "extra": 0,
+        "categoryCorrect": 1,
+        "withinTolerance": 1,
+        "missedEvents": [],
+        "extraEvents": [],
+        "categoryErrors": [],
+        "timeErrors": []
+      },
+      "hypotheses": {
+        "expected": 0,
+        "actual": 0,
+        "matched": 0,
+        "misclassifications": 0,
+        "missing": [],
+        "spurious": []
+      }
+    },
+    {
+      "name": "case-029",
+      "fewShotOverlap": true,
+      "events": {
+        "expected": 3,
+        "actual": 3,
+        "matched": 3,
+        "missed": 0,
+        "extra": 0,
+        "categoryCorrect": 3,
+        "withinTolerance": 3,
+        "missedEvents": [],
+        "extraEvents": [],
+        "categoryErrors": [],
+        "timeErrors": []
+      },
+      "hypotheses": {
+        "expected": 0,
+        "actual": 0,
+        "matched": 0,
+        "misclassifications": 0,
+        "missing": [],
+        "spurious": []
+      }
+    },
+    {
+      "name": "case-030",
+      "fewShotOverlap": true,
+      "events": {
+        "expected": 2,
+        "actual": 2,
+        "matched": 2,
+        "missed": 0,
+        "extra": 0,
+        "categoryCorrect": 2,
+        "withinTolerance": 2,
+        "missedEvents": [],
+        "extraEvents": [],
+        "categoryErrors": [],
+        "timeErrors": []
+      },
+      "hypotheses": {
+        "expected": 0,
+        "actual": 0,
+        "matched": 0,
+        "misclassifications": 0,
+        "missing": [],
+        "spurious": []
+      }
+    },
+    {
+      "name": "case-031",
+      "fewShotOverlap": true,
+      "events": {
+        "expected": 2,
+        "actual": 2,
+        "matched": 2,
+        "missed": 0,
+        "extra": 0,
+        "categoryCorrect": 2,
+        "withinTolerance": 2,
+        "missedEvents": [],
+        "extraEvents": [],
+        "categoryErrors": [],
+        "timeErrors": []
+      },
+      "hypotheses": {
+        "expected": 0,
+        "actual": 0,
+        "matched": 0,
+        "misclassifications": 0,
+        "missing": [],
+        "spurious": []
+      }
+    },
+    {
+      "name": "case-032",
+      "fewShotOverlap": false,
+      "events": {
+        "expected": 1,
+        "actual": 1,
+        "matched": 1,
+        "missed": 0,
+        "extra": 0,
+        "categoryCorrect": 1,
+        "withinTolerance": 1,
+        "missedEvents": [],
+        "extraEvents": [],
+        "categoryErrors": [],
+        "timeErrors": []
+      },
+      "hypotheses": {
+        "expected": 0,
+        "actual": 0,
+        "matched": 0,
+        "misclassifications": 0,
+        "missing": [],
+        "spurious": []
+      }
+    },
+    {
+      "name": "case-033",
+      "fewShotOverlap": false,
+      "events": {
+        "expected": 2,
+        "actual": 3,
+        "matched": 2,
+        "missed": 0,
+        "extra": 1,
+        "categoryCorrect": 2,
+        "withinTolerance": 2,
+        "missedEvents": [],
+        "extraEvents": [
+          {
+            "category": "digestion",
+            "occurred_at": "2026-08-19T12:30:00+09:00"
+          }
+        ],
+        "categoryErrors": [],
+        "timeErrors": []
+      },
+      "hypotheses": {
+        "expected": 0,
+        "actual": 0,
+        "matched": 0,
+        "misclassifications": 0,
+        "missing": [],
+        "spurious": []
+      }
+    },
+    {
+      "name": "case-034",
+      "fewShotOverlap": true,
+      "events": {
+        "expected": 1,
+        "actual": 1,
+        "matched": 1,
+        "missed": 0,
+        "extra": 0,
+        "categoryCorrect": 1,
+        "withinTolerance": 1,
+        "missedEvents": [],
+        "extraEvents": [],
+        "categoryErrors": [],
+        "timeErrors": []
+      },
+      "hypotheses": {
+        "expected": 0,
+        "actual": 0,
+        "matched": 0,
+        "misclassifications": 0,
+        "missing": [],
+        "spurious": []
+      }
+    },
+    {
+      "name": "case-035",
+      "fewShotOverlap": true,
+      "events": {
+        "expected": 2,
+        "actual": 2,
+        "matched": 2,
+        "missed": 0,
+        "extra": 0,
+        "categoryCorrect": 2,
+        "withinTolerance": 2,
+        "missedEvents": [],
+        "extraEvents": [],
+        "categoryErrors": [],
+        "timeErrors": []
+      },
+      "hypotheses": {
+        "expected": 0,
+        "actual": 0,
+        "matched": 0,
+        "misclassifications": 0,
+        "missing": [],
+        "spurious": []
+      }
+    },
+    {
+      "name": "case-036",
+      "fewShotOverlap": false,
+      "events": {
+        "expected": 2,
+        "actual": 2,
+        "matched": 2,
+        "missed": 0,
+        "extra": 0,
+        "categoryCorrect": 2,
+        "withinTolerance": 2,
+        "missedEvents": [],
+        "extraEvents": [],
+        "categoryErrors": [],
+        "timeErrors": []
+      },
+      "hypotheses": {
+        "expected": 0,
+        "actual": 0,
+        "matched": 0,
+        "misclassifications": 0,
+        "missing": [],
+        "spurious": []
+      }
+    },
+    {
+      "name": "case-037",
+      "fewShotOverlap": false,
+      "events": {
+        "expected": 2,
+        "actual": 2,
+        "matched": 2,
+        "missed": 0,
+        "extra": 0,
+        "categoryCorrect": 2,
+        "withinTolerance": 2,
+        "missedEvents": [],
+        "extraEvents": [],
+        "categoryErrors": [],
+        "timeErrors": []
+      },
+      "hypotheses": {
+        "expected": 0,
+        "actual": 0,
+        "matched": 0,
+        "misclassifications": 0,
+        "missing": [],
+        "spurious": []
+      }
+    },
+    {
+      "name": "case-038",
+      "fewShotOverlap": true,
+      "events": {
+        "expected": 1,
+        "actual": 1,
+        "matched": 1,
+        "missed": 0,
+        "extra": 0,
+        "categoryCorrect": 1,
+        "withinTolerance": 1,
+        "missedEvents": [],
+        "extraEvents": [],
+        "categoryErrors": [],
+        "timeErrors": []
+      },
+      "hypotheses": {
+        "expected": 0,
+        "actual": 0,
+        "matched": 0,
+        "misclassifications": 0,
+        "missing": [],
+        "spurious": []
+      }
+    },
+    {
+      "name": "case-039",
+      "fewShotOverlap": true,
+      "events": {
+        "expected": 2,
+        "actual": 2,
+        "matched": 2,
+        "missed": 0,
+        "extra": 0,
+        "categoryCorrect": 2,
+        "withinTolerance": 2,
+        "missedEvents": [],
+        "extraEvents": [],
+        "categoryErrors": [],
+        "timeErrors": []
+      },
+      "hypotheses": {
+        "expected": 0,
+        "actual": 0,
+        "matched": 0,
+        "misclassifications": 0,
+        "missing": [],
+        "spurious": []
+      }
+    },
+    {
+      "name": "case-040",
+      "fewShotOverlap": true,
+      "events": {
+        "expected": 2,
+        "actual": 2,
+        "matched": 2,
+        "missed": 0,
+        "extra": 0,
+        "categoryCorrect": 2,
+        "withinTolerance": 2,
+        "missedEvents": [],
+        "extraEvents": [],
+        "categoryErrors": [],
+        "timeErrors": []
+      },
+      "hypotheses": {
+        "expected": 1,
+        "actual": 1,
+        "matched": 1,
+        "misclassifications": 0,
+        "missing": [],
+        "spurious": []
+      }
+    },
+    {
+      "name": "case-041",
+      "fewShotOverlap": false,
+      "events": {
+        "expected": 2,
+        "actual": 2,
+        "matched": 2,
+        "missed": 0,
+        "extra": 0,
+        "categoryCorrect": 2,
+        "withinTolerance": 2,
+        "missedEvents": [],
+        "extraEvents": [],
+        "categoryErrors": [],
+        "timeErrors": []
+      },
+      "hypotheses": {
+        "expected": 0,
+        "actual": 0,
+        "matched": 0,
+        "misclassifications": 0,
+        "missing": [],
+        "spurious": []
+      }
+    },
+    {
+      "name": "case-042",
+      "fewShotOverlap": false,
+      "events": {
+        "expected": 2,
+        "actual": 2,
+        "matched": 2,
+        "missed": 0,
+        "extra": 0,
+        "categoryCorrect": 2,
+        "withinTolerance": 2,
+        "missedEvents": [],
+        "extraEvents": [],
+        "categoryErrors": [],
+        "timeErrors": []
+      },
+      "hypotheses": {
+        "expected": 0,
+        "actual": 0,
+        "matched": 0,
+        "misclassifications": 0,
+        "missing": [],
+        "spurious": []
+      }
+    },
+    {
+      "name": "case-043",
+      "fewShotOverlap": false,
+      "events": {
+        "expected": 1,
+        "actual": 2,
+        "matched": 1,
+        "missed": 0,
+        "extra": 1,
+        "categoryCorrect": 1,
+        "withinTolerance": 1,
+        "missedEvents": [],
+        "extraEvents": [
+          {
+            "category": "body_condition",
+            "occurred_at": "2026-08-23T08:00:00+09:00"
+          }
+        ],
+        "categoryErrors": [],
+        "timeErrors": []
+      },
+      "hypotheses": {
+        "expected": 0,
+        "actual": 0,
+        "matched": 0,
+        "misclassifications": 0,
+        "missing": [],
+        "spurious": []
+      }
+    },
+    {
+      "name": "case-044",
+      "fewShotOverlap": false,
+      "events": {
+        "expected": 2,
+        "actual": 1,
+        "matched": 1,
+        "missed": 1,
+        "extra": 0,
+        "categoryCorrect": 1,
+        "withinTolerance": 1,
+        "missedEvents": [
+          {
+            "category": "body_condition",
+            "occurred_at": "2026-08-23T10:00:00+09:00"
+          }
+        ],
+        "extraEvents": [],
+        "categoryErrors": [],
+        "timeErrors": []
+      },
+      "hypotheses": {
+        "expected": 0,
+        "actual": 0,
+        "matched": 0,
+        "misclassifications": 0,
+        "missing": [],
+        "spurious": []
+      }
+    },
+    {
+      "name": "case-045",
+      "fewShotOverlap": false,
+      "events": {
+        "expected": 2,
+        "actual": 2,
+        "matched": 2,
+        "missed": 0,
+        "extra": 0,
+        "categoryCorrect": 2,
+        "withinTolerance": 2,
+        "missedEvents": [],
+        "extraEvents": [],
+        "categoryErrors": [],
+        "timeErrors": []
+      },
+      "hypotheses": {
+        "expected": 0,
+        "actual": 0,
+        "matched": 0,
+        "misclassifications": 0,
+        "missing": [],
+        "spurious": []
+      }
+    },
+    {
+      "name": "case-046",
+      "fewShotOverlap": false,
+      "events": {
+        "expected": 1,
+        "actual": 1,
+        "matched": 1,
+        "missed": 0,
+        "extra": 0,
+        "categoryCorrect": 1,
+        "withinTolerance": 1,
+        "missedEvents": [],
+        "extraEvents": [],
+        "categoryErrors": [],
+        "timeErrors": []
+      },
+      "hypotheses": {
+        "expected": 0,
+        "actual": 0,
+        "matched": 0,
+        "misclassifications": 0,
+        "missing": [],
+        "spurious": []
+      }
+    },
+    {
+      "name": "case-047",
+      "fewShotOverlap": false,
+      "events": {
+        "expected": 2,
+        "actual": 2,
+        "matched": 2,
+        "missed": 0,
+        "extra": 0,
+        "categoryCorrect": 2,
+        "withinTolerance": 2,
+        "missedEvents": [],
+        "extraEvents": [],
+        "categoryErrors": [],
+        "timeErrors": []
+      },
+      "hypotheses": {
+        "expected": 0,
+        "actual": 0,
+        "matched": 0,
+        "misclassifications": 0,
+        "missing": [],
+        "spurious": []
+      }
+    },
+    {
+      "name": "case-048",
+      "fewShotOverlap": false,
+      "events": {
+        "expected": 1,
+        "actual": 1,
+        "matched": 1,
+        "missed": 0,
+        "extra": 0,
+        "categoryCorrect": 1,
+        "withinTolerance": 1,
+        "missedEvents": [],
+        "extraEvents": [],
+        "categoryErrors": [],
+        "timeErrors": []
+      },
+      "hypotheses": {
+        "expected": 0,
+        "actual": 0,
+        "matched": 0,
+        "misclassifications": 0,
+        "missing": [],
+        "spurious": []
+      }
+    },
+    {
+      "name": "case-049",
+      "fewShotOverlap": true,
+      "events": {
+        "expected": 2,
+        "actual": 2,
+        "matched": 2,
+        "missed": 0,
+        "extra": 0,
+        "categoryCorrect": 2,
+        "withinTolerance": 2,
+        "missedEvents": [],
+        "extraEvents": [],
+        "categoryErrors": [],
+        "timeErrors": []
+      },
+      "hypotheses": {
+        "expected": 0,
+        "actual": 0,
+        "matched": 0,
+        "misclassifications": 0,
+        "missing": [],
+        "spurious": []
+      }
+    },
+    {
+      "name": "case-050",
+      "fewShotOverlap": true,
+      "events": {
+        "expected": 2,
+        "actual": 2,
+        "matched": 2,
+        "missed": 0,
+        "extra": 0,
+        "categoryCorrect": 2,
+        "withinTolerance": 2,
+        "missedEvents": [],
+        "extraEvents": [],
+        "categoryErrors": [],
+        "timeErrors": []
+      },
+      "hypotheses": {
+        "expected": 0,
+        "actual": 0,
+        "matched": 0,
+        "misclassifications": 0,
+        "missing": [],
+        "spurious": []
+      }
+    },
+    {
+      "name": "case-051",
+      "fewShotOverlap": false,
+      "events": {
+        "expected": 1,
+        "actual": 1,
+        "matched": 1,
+        "missed": 0,
+        "extra": 0,
+        "categoryCorrect": 1,
+        "withinTolerance": 1,
+        "missedEvents": [],
+        "extraEvents": [],
+        "categoryErrors": [],
+        "timeErrors": []
+      },
+      "hypotheses": {
+        "expected": 0,
+        "actual": 0,
+        "matched": 0,
+        "misclassifications": 0,
+        "missing": [],
+        "spurious": []
+      }
+    },
+    {
+      "name": "case-052",
+      "fewShotOverlap": false,
+      "events": {
+        "expected": 1,
+        "actual": 1,
+        "matched": 1,
+        "missed": 0,
+        "extra": 0,
+        "categoryCorrect": 1,
+        "withinTolerance": 1,
+        "missedEvents": [],
+        "extraEvents": [],
+        "categoryErrors": [],
+        "timeErrors": []
+      },
+      "hypotheses": {
+        "expected": 0,
+        "actual": 0,
+        "matched": 0,
+        "misclassifications": 0,
+        "missing": [],
+        "spurious": []
+      }
+    },
+    {
+      "name": "case-053",
+      "fewShotOverlap": false,
+      "events": {
+        "expected": 2,
+        "actual": 2,
+        "matched": 2,
+        "missed": 0,
+        "extra": 0,
+        "categoryCorrect": 2,
+        "withinTolerance": 2,
+        "missedEvents": [],
+        "extraEvents": [],
+        "categoryErrors": [],
+        "timeErrors": []
+      },
+      "hypotheses": {
+        "expected": 0,
+        "actual": 0,
+        "matched": 0,
+        "misclassifications": 0,
+        "missing": [],
+        "spurious": []
+      }
+    },
+    {
+      "name": "case-054",
+      "fewShotOverlap": false,
+      "events": {
+        "expected": 2,
+        "actual": 2,
+        "matched": 2,
+        "missed": 0,
+        "extra": 0,
+        "categoryCorrect": 2,
+        "withinTolerance": 2,
+        "missedEvents": [],
+        "extraEvents": [],
+        "categoryErrors": [],
+        "timeErrors": []
+      },
+      "hypotheses": {
+        "expected": 0,
+        "actual": 0,
+        "matched": 0,
+        "misclassifications": 0,
+        "missing": [],
+        "spurious": []
+      }
+    },
+    {
+      "name": "case-055",
+      "fewShotOverlap": false,
+      "events": {
+        "expected": 1,
+        "actual": 1,
+        "matched": 0,
+        "missed": 1,
+        "extra": 1,
+        "categoryCorrect": 0,
+        "withinTolerance": 0,
+        "missedEvents": [
+          {
+            "category": "environment",
+            "occurred_at": "2026-08-23T17:00:00+09:00"
+          }
+        ],
+        "extraEvents": [
+          {
+            "category": "environment",
+            "occurred_at": "2026-08-23T12:00:00+09:00"
+          }
+        ],
+        "categoryErrors": [],
+        "timeErrors": []
+      },
+      "hypotheses": {
+        "expected": 0,
+        "actual": 0,
+        "matched": 0,
+        "misclassifications": 0,
+        "missing": [],
+        "spurious": []
+      }
+    },
+    {
+      "name": "case-056",
+      "fewShotOverlap": false,
+      "events": {
+        "expected": 1,
+        "actual": 0,
+        "matched": 0,
+        "missed": 1,
+        "extra": 0,
+        "categoryCorrect": 0,
+        "withinTolerance": 0,
+        "missedEvents": [
+          {
+            "category": "environment",
+            "occurred_at": "2026-08-23T12:30:00+09:00"
+          }
+        ],
+        "extraEvents": [],
+        "categoryErrors": [],
+        "timeErrors": []
+      },
+      "hypotheses": {
+        "expected": 0,
+        "actual": 0,
+        "matched": 0,
+        "misclassifications": 0,
+        "missing": [],
+        "spurious": []
+      }
+    },
+    {
+      "name": "case-057",
+      "fewShotOverlap": false,
+      "events": {
+        "expected": 2,
+        "actual": 2,
+        "matched": 2,
+        "missed": 0,
+        "extra": 0,
+        "categoryCorrect": 2,
+        "withinTolerance": 2,
+        "missedEvents": [],
+        "extraEvents": [],
+        "categoryErrors": [],
+        "timeErrors": []
+      },
+      "hypotheses": {
+        "expected": 0,
+        "actual": 0,
+        "matched": 0,
+        "misclassifications": 0,
+        "missing": [],
+        "spurious": []
+      }
+    },
+    {
+      "name": "case-058",
+      "fewShotOverlap": false,
+      "events": {
+        "expected": 1,
+        "actual": 1,
+        "matched": 1,
+        "missed": 0,
+        "extra": 0,
+        "categoryCorrect": 1,
+        "withinTolerance": 1,
+        "missedEvents": [],
+        "extraEvents": [],
+        "categoryErrors": [],
+        "timeErrors": []
+      },
+      "hypotheses": {
+        "expected": 0,
+        "actual": 0,
+        "matched": 0,
+        "misclassifications": 0,
+        "missing": [],
+        "spurious": []
+      }
+    },
+    {
+      "name": "case-059",
+      "fewShotOverlap": false,
+      "events": {
+        "expected": 1,
+        "actual": 1,
+        "matched": 1,
+        "missed": 0,
+        "extra": 0,
+        "categoryCorrect": 1,
+        "withinTolerance": 1,
+        "missedEvents": [],
+        "extraEvents": [],
+        "categoryErrors": [],
+        "timeErrors": []
+      },
+      "hypotheses": {
+        "expected": 0,
+        "actual": 0,
+        "matched": 0,
+        "misclassifications": 0,
+        "missing": [],
+        "spurious": []
+      }
+    },
+    {
+      "name": "case-060",
+      "fewShotOverlap": false,
+      "events": {
+        "expected": 1,
+        "actual": 1,
+        "matched": 1,
+        "missed": 0,
+        "extra": 0,
+        "categoryCorrect": 1,
+        "withinTolerance": 1,
+        "missedEvents": [],
+        "extraEvents": [],
+        "categoryErrors": [],
+        "timeErrors": []
+      },
+      "hypotheses": {
+        "expected": 0,
+        "actual": 0,
+        "matched": 0,
+        "misclassifications": 0,
+        "missing": [],
+        "spurious": []
+      }
+    }
+  ],
+  "segments": {
+    "non_overlap": {
+      "case_count": 37,
+      "totals": {
+        "events_expected": 56,
+        "events_actual": 56,
+        "events_matched": 53,
+        "events_missed": 3,
+        "events_extra": 3,
+        "detection_recall": 0.9464285714285714,
+        "detection_precision": 0.9464285714285714,
+        "detection_f1": 0.9464285714285714,
+        "category_correct": 53,
+        "category_accuracy": 1,
+        "occurred_at_within_tol": 53,
+        "occurred_at_pass_rate": 1,
+        "hypotheses_expected": 2,
+        "hypotheses_actual": 2,
+        "hypotheses_matched": 2,
+        "hypothesis_misclassifications": 0,
+        "fewshot_overlap_count": 0
+      }
+    },
+    "overlap": {
+      "case_count": 23,
+      "totals": {
+        "events_expected": 53,
+        "events_actual": 52,
+        "events_matched": 52,
+        "events_missed": 1,
+        "events_extra": 0,
+        "detection_recall": 0.9811320754716981,
+        "detection_precision": 1,
+        "detection_f1": 0.9904761904761905,
+        "category_correct": 52,
+        "category_accuracy": 1,
+        "occurred_at_within_tol": 52,
+        "occurred_at_pass_rate": 1,
+        "hypotheses_expected": 5,
+        "hypotheses_actual": 5,
+        "hypotheses_matched": 5,
+        "hypothesis_misclassifications": 0,
+        "fewshot_overlap_count": 23
+      }
+    },
+    "total": {
+      "case_count": 60,
+      "totals": {
+        "events_expected": 109,
+        "events_actual": 108,
+        "events_matched": 105,
+        "events_missed": 4,
+        "events_extra": 3,
+        "detection_recall": 0.963302752293578,
+        "detection_precision": 0.9722222222222222,
+        "detection_f1": 0.9677419354838711,
+        "category_correct": 105,
+        "category_accuracy": 1,
+        "occurred_at_within_tol": 105,
+        "occurred_at_pass_rate": 1,
+        "hypotheses_expected": 7,
+        "hypotheses_actual": 7,
+        "hypotheses_matched": 7,
+        "hypothesis_misclassifications": 0,
+        "fewshot_overlap_count": 23
+      }
+    }
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "input": {
+    "transcript": "몸은 너무 피곤한데 이상하게 집중은 잘 되네.",
+    "recorded_at": "2026-08-23T15:00:00+09:00",
+    "dictionary": {}
+  },
+  "expected": {
+    "events": [
+      {
+        "category": "energy",
+        "occurred_at": "2026-08-23T15:00:00+09:00",
+        "occurred_at_precision": "hour",
+        "payload": { "level": 2, "note": "몸이 너무 피곤함" },
+        "confidence": 0.8,
+        "needs_review": false
+      },
+      {
+        "category": "focus",
+        "occurred_at": "2026-08-23T15:00:00+09:00",
+        "occurred_at_precision": "hour",
+        "payload": { "level": 4, "note": "집중은 잘 됨" },
+        "confidence": 0.8,
+        "needs_review": false
+      }
+    ],
+    "hypotheses": [],
+    "unparsed": []
+  },
+  "_covers": ["energy(피곤, 2)와 focus(잘 됨, 4)가 반대 방향 → 둘 다 기록 (R25, 다른 축)", "\"~데\"는 비인과 → hypothesis 없음"]
+}

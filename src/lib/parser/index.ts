@@ -12,6 +12,7 @@ import { PROMPT_V7 } from "./prompts/v7";
 import { PROMPT_V8 } from "./prompts/v8";
 import { PROMPT_V9 } from "./prompts/v9";
 import { PROMPT_V10 } from "./prompts/v10";
+import { PROMPT_V11 } from "./prompts/v11";
 import type { Category, OccurredAtPrecision } from "@/lib/db/schema";
 
 /**
@@ -24,7 +25,7 @@ import type { Category, OccurredAtPrecision } from "@/lib/db/schema";
 /** 파싱 모델은 env(PARSE_MODEL)로 오버라이드. 기본값은 env.parseModel() 참고. */
 
 /** 프롬프트 파일명과 동기화한다. 프롬프트를 고치면 prompts/vN.ts 를 새로 만들고 이 값을 올린다. */
-export const PARSE_VERSION = "v10";
+export const PARSE_VERSION = "v11";
 
 // 출력 한도. 사고(thinking)는 꺼도(아래 callModel) 이벤트가 많은 원문은 출력이 길어진다 —
 // 카테고리 10개 + payload 필드 확장으로 이벤트당 출력이 늘어, 13건짜리 원문에서 11,779자가
@@ -155,9 +156,11 @@ const bodyPartSchema = z.enum([
 ]);
 
 // body_condition — 상태(관찰). 방향 판정 필드 없음. self_rating 은 명시된 숫자만. (R23)
+// since_text: 지속 상태의 발단 원문("어제부터"). occurred_at 은 관찰 시점으로. (R23 보강)
 const bodyConditionPayloadSchema = z.object({
   part: bodyPartSchema,
   description_text: z.string(),
+  since_text: z.string().nullable(),
   self_rating: z.number().int().nullable(),
   rating_scale: z.number().int().nullable(),
   note: z.string().nullable(),
@@ -168,6 +171,19 @@ const bodyCarePayloadSchema = z.object({
   part: bodyPartSchema,
   action_text: z.string(),
   product_text: z.string().nullable(),
+  note: z.string().nullable(),
+});
+
+// focus — 집중 상태(결과 변수). level 1~5. energy 와 다른 축. (R25)
+const focusPayloadSchema = z.object({
+  level: z.number().int().min(1).max(5),
+  note: z.string().nullable(),
+});
+
+// environment — 환경 요인(원인 후보). 상태도 행위도 아닌 맥락. (R26)
+const environmentPayloadSchema = z.object({
+  kind: z.enum(["sleep", "work", "light_exposure", "other"]),
+  description_text: z.string(),
   note: z.string().nullable(),
 });
 
@@ -194,6 +210,8 @@ const llmEventSchema = z.discriminatedUnion("category", [
     ...eventBase,
   }),
   z.object({ category: z.literal("body_care"), payload: bodyCarePayloadSchema, ...eventBase }),
+  z.object({ category: z.literal("focus"), payload: focusPayloadSchema, ...eventBase }),
+  z.object({ category: z.literal("environment"), payload: environmentPayloadSchema, ...eventBase }),
 ]);
 
 const hypothesisSchema = z.object({
@@ -247,12 +265,18 @@ const PROMPTS: Record<string, string> = {
   v8: PROMPT_V8,
   v9: PROMPT_V9,
   v10: PROMPT_V10,
+  v11: PROMPT_V11,
 };
 
 function loadSystemPrompt(version: string): string {
   const prompt = PROMPTS[version];
   if (!prompt) throw new Error(`알 수 없는 프롬프트 버전: ${version}`);
   return prompt;
+}
+
+/** 현재 PARSE_VERSION 의 시스템 프롬프트. 골든 러너의 "few-shot 겹침" 탐지에 쓴다. */
+export function activeSystemPrompt(): string {
+  return loadSystemPrompt(PARSE_VERSION);
 }
 
 function tryJson(text: string): { ok: boolean; value: unknown } {

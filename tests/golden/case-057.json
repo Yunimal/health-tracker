@@ -1,0 +1,36 @@
+{
+  "input": {
+    "transcript": "낮에 공원에서 산책하면서 햇빛도 많이 봤어.",
+    "recorded_at": "2026-08-23T15:00:00+09:00",
+    "dictionary": {}
+  },
+  "expected": {
+    "events": [
+      {
+        "category": "activity",
+        "occurred_at": "2026-08-23T15:00:00+09:00",
+        "occurred_at_precision": "part_of_day",
+        "payload": {
+          "name": "산책",
+          "duration_min": null,
+          "distance_km": null,
+          "intensity_text": null,
+          "note": null
+        },
+        "confidence": 0.8,
+        "needs_review": false
+      },
+      {
+        "category": "environment",
+        "occurred_at": "2026-08-23T15:00:00+09:00",
+        "occurred_at_precision": "part_of_day",
+        "payload": { "kind": "light_exposure", "description_text": "햇빛도 많이 봤어", "note": null },
+        "confidence": 0.8,
+        "needs_review": false
+      }
+    ],
+    "hypotheses": [],
+    "unparsed": []
+  },
+  "_covers": ["activity(산책) + environment(light_exposure) 2건 분리 (R26)", "\"~하면서\"는 비인과 → hypothesis 없음"]
+}

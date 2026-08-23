@@ -1,0 +1,22 @@
+{
+  "input": {
+    "transcript": "오늘은 종일 산만해서 집중이 하나도 안 됐어.",
+    "recorded_at": "2026-08-23T18:00:00+09:00",
+    "dictionary": {}
+  },
+  "expected": {
+    "events": [
+      {
+        "category": "focus",
+        "occurred_at": "2026-08-23T18:00:00+09:00",
+        "occurred_at_precision": "hour",
+        "payload": { "level": 1, "note": "종일 산만해서 집중이 하나도 안 됨" },
+        "confidence": 0.8,
+        "needs_review": false
+      }
+    ],
+    "hypotheses": [],
+    "unparsed": []
+  },
+  "_covers": ["focus 1건, level=1 (하나도 안 됨) (R25)", "\"산만해서 안 됐어\"는 동어반복 → hypothesis 없음 (R1)"]
+}

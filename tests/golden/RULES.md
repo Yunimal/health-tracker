@@ -137,6 +137,22 @@ Phase 2 에서 appetite 카테고리를 추가할 1순위 후보이므로 unpars
 00:00 은 전날과 경계가 맞닿아 시간대 변환 한 시간 오차로도
 날짜가 넘어간다. 정오는 양쪽으로 12시간 여유가 있다.
 
+### 자정 표현
+
+"밤 12시", "자정" 은 그 날짜가 끝나는 시점이다.
+- "어젯밤 12시에 누웠어" (오늘 기록) → 오늘 00:00
+- "오늘 밤 12시" → 내일 00:00
+
+취침 시각은 자정 근처가 흔하므로 이 해석을 명시한다.
+
+### "오늘" 은 예외
+
+날짜 단서만 있으면 12:00 date 로 하지만, "오늘" 은 예외로
+recorded_at 을 쓰고 precision 은 "date" 로 한다.
+이유: 다른 날짜 단서와 달리 "오늘" 에는 recorded_at 이라는
+실제 시각 정보가 있다. 정오로 뭉개는 것보다 정확하다.
+"어제", "지난 주말" 등 나머지는 기존대로 12:00 date.
+
 ### confidence 계산식
 
 1.00 에서 시작해 아래를 차감한다. 하한은 0.30.
@@ -432,6 +448,27 @@ payload:
 - 서로 다른 관찰은 분리한다. (R13 과 같은 원칙)
   "두피 가렵고 각질도 있어" → 2건
 
+### R23 보강 — since_text
+
+body_condition payload 에 since_text 를 추가한다 (원문 표현 또는 null).
+"어제부터 얼굴이 뒤집어졌어" → since_text="어제부터"
+occurred_at 은 발단 시점이 아니라 관찰 시점(recorded_at 기준)으로 한다.
+발단 날짜를 숫자로 계산하지 않는다 — "어제부터", "요즘", "며칠 됐어" 의
+정밀도가 제각각이므로 원문을 남기고 해석은 조회 시점에 한다.
+
+### R23 보강 — 분리와 합침의 경계
+
+서로 다른 감각·상태를 가리키는 단어가 둘 이상이면 각각 분리한다.
+같은 것을 강도만 달리해 반복한 것은 하나로 합친다.
+
+  "가렵고 따가워"            → 2건 (가려움과 따가움은 다른 감각)
+  "매끈해지고 트러블 가라앉음" → 2건 (질감과 트러블은 다른 관찰)
+  "잘 됐고 완전 몰입했어"     → 1건 (같은 축의 강도 반복, R25)
+  "너무너무 가려워"          → 1건 (강조일 뿐)
+
+판별 기준: 두 표현이 각각 따로 나아지거나 나빠질 수 있으면 분리한다.
+가려움이 사라져도 따가움은 남을 수 있으므로 별개다.
+
 ## R24. body_care — 관리 행위
 
 payload:
@@ -451,6 +488,42 @@ payload:
 소화 감각 → digestion / 배변 → bowel / 생리 → menstrual 이 우선이다.
 body_condition 은 이들이 담지 않는 부위만 담는다.
 배 아픔은 digestion 이지 body_condition 이 아니다.
+
+## R25. focus — 집중 상태
+
+payload:
+  level: 1~5 (필수)
+  note: 문자열 또는 null
+
+수치화 기준 (R10 energy 와 같은 방식):
+  1 아예 안 됨 / 2 산만함 / 3 보통 / 4 잘 됨 / 5 몰입
+
+- energy(기력)와 다른 축이다. 피곤한데 집중되는 날이 있고 그 반대도 있다.
+  "피곤한데 집중은 잘 돼" → energy 1건 + focus 1건
+
+### 같은 축의 중복 서술은 합친다
+
+서로 다른 종류의 관찰이면 분리하지만(R13, R23),
+같은 축을 강도만 달리해 두 번 말한 것은 한 이벤트로 합치고
+더 강한 값을 쓴다. 원문 전체는 note 에 남긴다.
+  "집중 잘 됐고 완전 몰입했어" → focus 1건, level=5
+  "가렵고 따가워" → 서로 다른 감각이므로 2건 (R23 유지)
+
+## R26. environment — 환경 요인
+
+payload:
+  kind: "sleep" | "work" | "light_exposure" | "other" (필수)
+  description_text: 원문 표현 (필수)
+  note: 문자열 또는 null
+
+- 환경은 상태(body_condition)도 행위(activity)도 아닌 맥락이다.
+  "산책하면서 햇빛 봤어" → activity(산책) + environment(light_exposure) 2건
+- 수면 환경은 sleep 의 note 에 넣지 말고 별도 environment 이벤트로 만든다.
+  이유: 환경은 원인 후보로 비교하기 위한 항목이다.
+  note 안의 문자열은 분석에서 추출할 수 없다.
+  "12시에 누워서 7시에 일어났고 에어컨 켜고 잤어"
+    → sleep(bedtime, wake_time) + environment(kind=sleep) 2건
+- 장소는 work 환경으로 본다. "카페에서 작업했어" → kind=work
 
 ======================= 케이스별 확정 =======================
 
@@ -506,13 +579,23 @@ body_condition 은 이들이 담지 않는 부위만 담는다.
 | 041 | 두피+점수 | body_condition 2건 — scalp(가려움) + scalp(각질). 가려움에 self_rating=2, rating_scale=5. 점수는 첫 관찰에 (R23) |
 | 042 | 모발 | body_condition 2건 — hair(빠짐) + hair(푸석). 서로 다른 관찰 분리 (R23) |
 | 043 | 피부 나빠짐 | body_condition 1건 — skin. description_text 원문 보존, 방향 필드 없음 (R23) |
-| 044 | 피부 좋아짐 | body_condition 1건 — skin. 개선도 관찰로 남긴다(방향 판정 안 함) (R23) |
+| 044 | 피부 좋아짐 | body_condition **2건** — skin(매끈함) + skin(트러블 가라앉음). 다른 관찰이라 분리 (R23 보강) |
 | 045 | 질 상태 | body_condition 2건 — vaginal(가려움) + vaginal(따가움). 부위 상태라 menstrual 아님 (R23) |
 | 046 | 성욕 | body_condition 1건 — libido. 방향 판정 없이 원문 그대로 (R23) |
 | 047 | 각질 관리 | body_care 2건 — foot(각질 제거) + foot(풋크림, product_text 채움). 행위 분리 (R24) |
 | 048 | 미백 케어 | body_care 1건 — skin(미백크림, product_text="미백크림"). "자기 전"→23:30 hour (R24/R6) |
 | 049 | 경계 | digestion(pain) + body_condition(eye). 배 아픔은 digestion 우선, body_condition 아님 (기존 카테고리 우선) |
 | 050 | 상태/행위 분리 | body_care(armpit, 제모) + body_condition(armpit, 따가움) 2건. **hypothesis 없음** ("~하고 나서"=순서, R24/R1) |
+| 051 | 집중 잘 됨 | focus 1건, level=5 (같은 축 중복 서술 → 합침, 더 강한 값). note 에 원문 전체 (R25) |
+| 052 | 집중 안 됨 | focus 1건, level=1. **hypothesis 없음** (동어반복) (R25) |
+| 053 | 기력↔집중 반대 | energy 1건 + focus 1건 (반대 방향, 둘 다 기록). "~데" 비인과 → hypothesis 없음 (R25) |
+| 054 | 수면시간+수면환경 | sleep(bedtime 00:00, wake_time 07:00) + environment(kind=sleep) 2건. 환경은 sleep note 아닌 별도 이벤트 (R26) |
+| 055 | 작업 환경 | environment(kind=work). "카페 작업"은 맥락이지 activity 아님. "오늘" → occurred_at=recorded_at, precision date (R6 예외) |
+| 056 | 햇빛 | environment(kind=light_exposure). "점심때"→12:30 part_of_day (R26/R6) |
+| 057 | 운동+햇빛 분리 | activity(산책) + environment(light_exposure) 2건. "~하면서" 비인과 → hypothesis 없음 (R26) |
+| 058 | 물 섭취(기존검증) | food(kind=drink, name=물, amount_value=null). "많이"는 모호 → null (R5) |
+| 059 | 술(기존검증) | food(kind=drink, name=맥주, amount_value=2, amount_unit=캔). 종류가 name 에 남음 |
+| 060 | 지속상태 since_text | body_condition(part=skin, since_text="어제부터"). occurred_at 은 관찰 시점(recorded_at) (R23 보강) |
 
 > case-023 은 hypothesis 를 만들지 않는다. "어제 등산 다녀왔는데 오늘 뻐근하네" 의 "~는데"는
 > R1 의 닫힌 인과 연결어 목록(~해서/~때문에/~라서/~인지/~탓에) 밖이고 비인과 용법이
@@ -638,5 +721,35 @@ v11 에서 case-041 또는 case-045 를 few-shot 에 추가한다.
 
 ### 함께 할 것
 
-프롬프트 다이어트(few-shot 축소)를 같은 버전에서 진행한다.
-골든 실행을 한 번으로 묶기 위함이다.
+프롬프트 다이어트(few-shot 축소)는 **v12 로 미룬다.** v11(새 카테고리 + since_text)과 섞으면
+점수가 변했을 때 원인을 가릴 수 없어서다.
+
+DRAFT7 확정(focus / environment 카테고리 + since_text):
+
+- **R25** 신설(focus): level 1~5(1 아예 안 됨/2 산만/3 보통/4 잘 됨/5 몰입, R10 방식) · energy 와
+  다른 축(피곤한데 집중되는 날 → 둘 다 기록) · **같은 축의 강도만 다른 중복 서술은 합치고 더
+  강한 값**(051 "잘 됐고 몰입" → level 5, 원문은 note). 서로 다른 감각은 여전히 분리(R23).
+- **R26** 신설(environment): kind 4종(sleep/work/light_exposure/other) · 상태도 행위도 아닌 맥락 ·
+  activity 와 분리("산책하면서 햇빛" → 2건) · **수면 환경은 sleep note 가 아니라 별도 environment
+  이벤트**(note 문자열은 분석에서 추출 불가, 원인 후보로 쓰려면 독립 이벤트여야).
+- **R23 보강**: body_condition 에 since_text(발단 원문, nullable) 추가. occurred_at 은 관찰
+  시점(recorded_at)으로, 발단 날짜는 숫자화하지 않는다. (v10 골든 case-043 튐 해소)
+- confidence(R6): focus/environment 는 amount 개념 없어 precision 페널티만(energy/activity 처럼).
+  코드 변경 불필요(confidence.ts).
+- case-051~060 확정. 카테고리 14개로 확장(**0011: events.category CHECK**). schema.ts(FocusPayload/
+  EnvironmentPayload + body_condition.since_text)·index.ts zod·**v11 프롬프트(다이어트 없이,
+  case-053/054 + body_condition 분리 few-shot 추가)**·format.ts·RULES 갱신.
+- ⚠️ **적용 순서: 0011 마이그레이션 먼저 → 배치 재파싱.** (0010 과 같은 이유. CLAUDE.md 원칙 2)
+- 분석: outcomes.ts 에 focus 추가(scale, focus.level, high_good, good[4,5] bad[1,2], lookback 12h).
+  environment 는 결과가 아니라 원인 후보 — inputs.ts 의 카테고리 존재 여부 목록에 자동 포함
+  (Object.keys(CATEGORY_LABEL) 기반).
+
+DRAFT7 미해결 (규칙이 아직 안 다루는 것 — 채우지 않고 남김):
+
+- **environment kind 경계:** work(장소/작업 맥락)과 other 의 구분, light_exposure 의 범위("창가에
+  앉음"도 포함?)는 전용 케이스가 적다. 실사용 데이터로 이어 확정.
+- **focus 다중 강도(051):** 같은 축 합치기는 정했으나, 시각이 다른 두 집중 서술(오전 몰입 +
+  오후 산만)은 별개 이벤트인지 전용 케이스 없음. (009 아메리카노 2회와 같은 결로 추정)
+- **"낮" 시각(057):** R6 표에 "낮"이 없다. 잠정 recorded_at 부근으로 두었다. 자주 나오면 R6 에 추가.
+- **water/alcohol payload:** 물의 amount 단위, 술의 meal_type/도수는 전용 케이스 없음. 별도
+  카테고리는 만들지 않고 food(drink) 유지(확정).

@@ -42,6 +42,7 @@ const FIELD_LABEL: Record<string, string> = {
   controllable_text: "참을 수 있는지(원문)",
   part: "부위",
   description_text: "상태(원문)",
+  since_text: "언제부터(원문)",
   self_rating: "직접 매긴 점수",
   rating_scale: "점수 만점",
   action_text: "관리 행위(원문)",
@@ -61,6 +62,8 @@ const CATEGORIES: Category[] = [
   "digestion",
   "body_condition",
   "body_care",
+  "focus",
+  "environment",
 ];
 
 /** occurred_at(ISO, 대개 UTC) ↔ datetime-local. 입력창은 KST 벽시계로 취급한다. */
@@ -125,6 +128,7 @@ function initFields(category: Category, p: Record<string, unknown>): Fields {
       return {
         part: s("part"),
         description_text: s("description_text"),
+        since_text: s("since_text"),
         self_rating: n("self_rating"),
         rating_scale: n("rating_scale"),
         note: s("note"),
@@ -136,6 +140,10 @@ function initFields(category: Category, p: Record<string, unknown>): Fields {
         product_text: s("product_text"),
         note: s("note"),
       };
+    case "focus":
+      return { level: n("level"), note: s("note") };
+    case "environment":
+      return { kind: s("kind"), description_text: s("description_text"), note: s("note") };
   }
 }
 
@@ -226,6 +234,7 @@ function buildPayload(
         ...base,
         part: f.part || "other",
         description_text: f.description_text ?? "",
+        since_text: strOrNull(f.since_text!),
         self_rating: numOrNull(f.self_rating!),
         rating_scale: numOrNull(f.rating_scale!),
         note: strOrNull(f.note!),
@@ -236,6 +245,15 @@ function buildPayload(
         part: f.part || "other",
         action_text: f.action_text ?? "",
         product_text: strOrNull(f.product_text!),
+        note: strOrNull(f.note!),
+      };
+    case "focus":
+      return { ...base, level: numOrNull(f.level!) ?? 3, note: strOrNull(f.note!) };
+    case "environment":
+      return {
+        ...base,
+        kind: f.kind || "other",
+        description_text: f.description_text ?? "",
         note: strOrNull(f.note!),
       };
   }

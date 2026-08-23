@@ -18,7 +18,9 @@ export type Category =
   | "appetite"
   | "digestion"
   | "body_condition"
-  | "body_care";
+  | "body_care"
+  | "focus"
+  | "environment";
 export type OccurredAtPrecision = "exact" | "hour" | "part_of_day" | "date";
 export type HypothesisStatus = "open" | "supported" | "not_supported" | "dismissed";
 
@@ -162,6 +164,9 @@ export type BodyPart =
 export interface BodyConditionPayload {
   part: BodyPart;
   description_text: string; // 상태를 말한 그대로. "가렵다", "뒤집어졌다", "매끈해졌다"
+  // 지속 상태의 발단 원문. "어제부터", "요즘". 발단 날짜를 숫자로 계산하지 않는다. (R23 보강)
+  // occurred_at 은 발단이 아니라 관찰 시점(recorded_at)으로 둔다.
+  since_text: string | null;
   self_rating: number | null; // 사용자가 명시적으로 말한 점수만. 서술로 지어내지 않는다.
   rating_scale: number | null; // 그 점수의 만점. "5점 중 2점" → 5
   note: string | null;
@@ -172,6 +177,21 @@ export interface BodyCarePayload {
   part: BodyPart;
   action_text: string; // 관리 행위를 말한 그대로. "제모함", "각질 제거", "미백크림 발랐어"
   product_text: string | null; // 사용한 제품 원문. 없으면 null
+  note: string | null;
+}
+
+// focus — 집중 상태(결과 변수). energy 와 다른 축이다. level 수치화는 R25(1~5).
+export type FocusLevel = 1 | 2 | 3 | 4 | 5;
+export interface FocusPayload {
+  level: FocusLevel; // 1 아예 안 됨 ~ 5 몰입
+  note: string | null;
+}
+
+// environment — 환경 요인(원인 후보). 상태도 행위도 아닌 맥락. (R26)
+export type EnvironmentKind = "sleep" | "work" | "light_exposure" | "other";
+export interface EnvironmentPayload {
+  kind: EnvironmentKind;
+  description_text: string; // "에어컨 켜고 잤어", "카페에서 작업했어"
   note: string | null;
 }
 
@@ -187,7 +207,9 @@ export type EventPayload =
   | AppetitePayload
   | DigestionPayload
   | BodyConditionPayload
-  | BodyCarePayload;
+  | BodyCarePayload
+  | FocusPayload
+  | EnvironmentPayload;
 
 // ── raw_entries ────────────────────────────────────────────────────────────
 export interface RawEntry {
@@ -273,6 +295,14 @@ export interface BodyCareEvent extends EventBase {
   category: "body_care";
   payload: BodyCarePayload;
 }
+export interface FocusEvent extends EventBase {
+  category: "focus";
+  payload: FocusPayload;
+}
+export interface EnvironmentEvent extends EventBase {
+  category: "environment";
+  payload: EnvironmentPayload;
+}
 
 export type Event =
   | FoodEvent
@@ -286,7 +316,9 @@ export type Event =
   | AppetiteEvent
   | DigestionEvent
   | BodyConditionEvent
-  | BodyCareEvent;
+  | BodyCareEvent
+  | FocusEvent
+  | EnvironmentEvent;
 
 // ── hypotheses ─────────────────────────────────────────────────────────────
 export interface Hypothesis {

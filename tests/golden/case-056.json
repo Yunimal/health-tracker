@@ -1,0 +1,26 @@
+{
+  "input": {
+    "transcript": "점심때 밖에 나가서 햇빛 좀 쐬었어.",
+    "recorded_at": "2026-08-23T14:00:00+09:00",
+    "dictionary": {}
+  },
+  "expected": {
+    "events": [
+      {
+        "category": "environment",
+        "occurred_at": "2026-08-23T12:30:00+09:00",
+        "occurred_at_precision": "part_of_day",
+        "payload": {
+          "kind": "light_exposure",
+          "description_text": "밖에 나가서 햇빛 좀 쐬었어",
+          "note": null
+        },
+        "confidence": 0.8,
+        "needs_review": false
+      }
+    ],
+    "hypotheses": [],
+    "unparsed": []
+  },
+  "_covers": ["environment kind=light_exposure (햇빛) (R26)", "\"점심때\" → 12:30 part_of_day (R6)"]
+}

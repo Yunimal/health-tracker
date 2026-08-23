@@ -15,6 +15,8 @@ export const CATEGORY_LABEL: Record<Category, string> = {
   digestion: "소화",
   body_condition: "몸 상태",
   body_care: "몸 관리",
+  focus: "집중",
+  environment: "환경",
 };
 
 /** 한글 라벨과 함께 쓰는 아이콘. 영어 코드명은 화면에 노출하지 않는다. */
@@ -31,6 +33,24 @@ export const CATEGORY_ICON: Record<Category, string> = {
   digestion: "🌀",
   body_condition: "🩺",
   body_care: "🧴",
+  focus: "🎯",
+  environment: "🌤",
+};
+
+/** environment kind 의 한글 라벨. (R26) */
+const ENVIRONMENT_KIND: Record<string, string> = {
+  sleep: "수면 환경",
+  work: "작업 환경",
+  light_exposure: "햇빛",
+  other: "환경",
+};
+/** focus level → 말. (R25, 화면에는 숫자를 쓰지 않는다) */
+const FOCUS_LEVEL: Record<number, string> = {
+  1: "아예 안 됨",
+  2: "산만함",
+  3: "보통",
+  4: "잘 됨",
+  5: "몰입",
 };
 
 /** 신체 부위(body_condition/body_care)의 한글 라벨. 영어 코드명은 화면에 노출하지 않는다. (R23) */
@@ -328,6 +348,8 @@ export function summarizeEvent(category: Category, payload: Record<string, unkno
       const partLabel = BODY_PART_LABEL[str(p, "part") ?? ""] ?? "";
       const desc = str(p, "description_text") ?? "상태";
       const parts: string[] = partLabel ? [`${partLabel} · ${desc}`] : [desc];
+      const since = str(p, "since_text"); // 발단 원문. "어제부터" (R23 보강)
+      if (since) parts.push(since);
       const rating = num(p, "self_rating");
       if (rating != null) {
         const scale = num(p, "rating_scale");
@@ -347,6 +369,18 @@ export function summarizeEvent(category: Category, payload: Record<string, unkno
       const note = str(p, "note");
       if (note) parts.push(note);
       return parts.join(" · ");
+    }
+    case "focus": {
+      // 집중 정도는 말로. energy 와 다른 축. (R25)
+      const level = word(FOCUS_LEVEL, num(p, "level"), "집중");
+      const note = str(p, "note");
+      return note ? `${level} · ${note}` : level;
+    }
+    case "environment": {
+      // 환경 종류 + 원문 서술. (R26)
+      const kind = ENVIRONMENT_KIND[str(p, "kind") ?? ""] ?? "환경";
+      const desc = str(p, "description_text");
+      return desc ? `${kind} · ${desc}` : kind;
     }
   }
 }

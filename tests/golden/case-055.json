@@ -1,0 +1,22 @@
+{
+  "input": {
+    "transcript": "오늘은 카페에서 작업했어.",
+    "recorded_at": "2026-08-23T17:00:00+09:00",
+    "dictionary": {}
+  },
+  "expected": {
+    "events": [
+      {
+        "category": "environment",
+        "occurred_at": "2026-08-23T17:00:00+09:00",
+        "occurred_at_precision": "date",
+        "payload": { "kind": "work", "description_text": "카페에서 작업했어", "note": null },
+        "confidence": 0.8,
+        "needs_review": false
+      }
+    ],
+    "hypotheses": [],
+    "unparsed": []
+  },
+  "_covers": ["environment kind=work (장소=작업 환경) (R26)", "\"오늘\"은 R6 예외 → occurred_at=recorded_at, precision=date"]
+}

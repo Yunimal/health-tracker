@@ -1,0 +1,33 @@
+{
+  "input": {
+    "transcript": "저녁에 맥주 두 캔 마셨어.",
+    "recorded_at": "2026-08-23T22:00:00+09:00",
+    "dictionary": {}
+  },
+  "expected": {
+    "events": [
+      {
+        "category": "food",
+        "occurred_at": "2026-08-23T19:00:00+09:00",
+        "occurred_at_precision": "part_of_day",
+        "payload": {
+          "name": "맥주",
+          "name_raw": "맥주",
+          "kind": "drink",
+          "meal_type": null,
+          "amount_text": "두 캔",
+          "amount_value": 2,
+          "amount_unit": "캔",
+          "completion_ratio": null,
+          "reason_text": null,
+          "reason": null
+        },
+        "confidence": 0.8,
+        "needs_review": false
+      }
+    ],
+    "hypotheses": [],
+    "unparsed": []
+  },
+  "_covers": ["술 → food(kind=drink), 종류가 name=맥주 에 보존(기존 기능 검증)", "\"두 캔\" → amount_value 2, amount_unit 캔. \"저녁\" → 19:00 part_of_day"]
+}

@@ -4,6 +4,7 @@ import { join } from "node:path";
 import {
   parseTranscript,
   PARSE_VERSION,
+  activeSystemPrompt,
   getApiCallCount,
   resetApiCallCount,
   getTokenTotals,
@@ -58,6 +59,7 @@ function loadCases(): {
 async function runGoldenSuite(): Promise<SuiteReport> {
   loadEnvLocal();
   const cases = loadCases();
+  const prompt = activeSystemPrompt(); // few-shot 겹침 탐지용
   resetApiCallCount();
   resetTokenTotals();
   const results: CaseResult[] = [];
@@ -77,7 +79,8 @@ async function runGoldenSuite(): Promise<SuiteReport> {
       actual = { events: [], hypotheses: [] };
     }
     const expected = toScoreSide(c.expected as Parameters<typeof toScoreSide>[0]);
-    results.push(scoreCase(c.name, expected, actual, error));
+    const fewShotOverlap = prompt.includes(c.input.transcript);
+    results.push(scoreCase(c.name, expected, actual, error, fewShotOverlap));
   }
 
   const report = scoreSuite(results, {

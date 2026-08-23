@@ -1,0 +1,29 @@
+{
+  "input": {
+    "transcript": "어제부터 얼굴이 계속 뒤집어져 있어. 아직도 그래.",
+    "recorded_at": "2026-08-24T09:00:00+09:00",
+    "dictionary": {}
+  },
+  "expected": {
+    "events": [
+      {
+        "category": "body_condition",
+        "occurred_at": "2026-08-24T09:00:00+09:00",
+        "occurred_at_precision": "hour",
+        "payload": {
+          "part": "skin",
+          "description_text": "얼굴이 계속 뒤집어져 있음",
+          "since_text": "어제부터",
+          "self_rating": null,
+          "rating_scale": null,
+          "note": null
+        },
+        "confidence": 0.8,
+        "needs_review": false
+      }
+    ],
+    "hypotheses": [],
+    "unparsed": []
+  },
+  "_covers": ["body_condition(skin) 지속 상태 + since_text=\"어제부터\" 보존 (R23 보강)", "occurred_at 은 발단 아닌 관찰 시점(recorded_at). 발단 날짜 숫자화 안 함"]
+}

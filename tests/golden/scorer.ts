@@ -83,6 +83,9 @@ export function toScoreSide(raw: {
 export interface CaseResult {
   name: string;
   error?: string;
+  // 이 케이스의 transcript 가 활성 프롬프트 few-shot 에 그대로 들어 있으면 true.
+  // 그런 케이스는 자기 자신을 채점하므로 일반화 성능을 재지 못한다. (CLAUDE.md 원칙 5)
+  fewShotOverlap?: boolean;
   events: {
     expected: number;
     actual: number;
@@ -150,6 +153,7 @@ export function scoreCase(
   expected: ScoreSide,
   actual: ScoreSide,
   error?: string,
+  fewShotOverlap = false,
 ): CaseResult {
   const usedE = new Set<number>();
   const usedA = new Set<number>();
@@ -207,6 +211,7 @@ export function scoreCase(
   return {
     name,
     error,
+    fewShotOverlap,
     events: {
       expected: expected.events.length,
       actual: actual.events.length,
@@ -249,6 +254,13 @@ export interface SuiteTotals {
   hypotheses_actual: number;
   hypotheses_matched: number;
   hypothesis_misclassifications: number;
+  fewshot_overlap_count: number; // few-shot 과 겹쳐 일반화를 못 재는 케이스 수
+}
+
+/** 케이스 묶음 한 구간의 지표. (non_overlap / overlap / total 각각에 대해 계산) */
+export interface SegmentReport {
+  case_count: number;
+  totals: SuiteTotals;
 }
 
 export interface SuiteReport {
@@ -256,18 +268,22 @@ export interface SuiteReport {
   model: string;
   generated_at: string;
   case_count: number;
-  totals: SuiteTotals;
+  totals: SuiteTotals; // = segments.total.totals (하위 호환 + 하드 게이트 기준)
   cases: CaseResult[];
+  // few-shot 겹침 여부로 나눈 세 구간. 프롬프트 개선 판단은 non_overlap 을 본다. (사용자 지시)
+  segments: {
+    non_overlap: SegmentReport; // 겹치지 않는 케이스 = 진짜 일반화 지표
+    overlap: SegmentReport; // few-shot 과 겹친 케이스 = 참고·회귀 감시용
+    total: SegmentReport; // 전체
+  };
 }
 
 function ratio(n: number, d: number): number {
   return d === 0 ? 1 : n / d;
 }
 
-export function scoreSuite(
-  cases: CaseResult[],
-  meta: { parse_version: string; model: string; generated_at: string },
-): SuiteReport {
+/** 케이스 부분집합에 대한 지표 합산. */
+function computeTotals(cases: CaseResult[]): SuiteTotals {
   const t: SuiteTotals = {
     events_expected: 0,
     events_actual: 0,
@@ -285,8 +301,10 @@ export function scoreSuite(
     hypotheses_actual: 0,
     hypotheses_matched: 0,
     hypothesis_misclassifications: 0,
+    fewshot_overlap_count: 0,
   };
   for (const c of cases) {
+    if (c.fewShotOverlap) t.fewshot_overlap_count++;
     t.events_expected += c.events.expected;
     t.events_actual += c.events.actual;
     t.events_matched += c.events.matched;
@@ -305,8 +323,27 @@ export function scoreSuite(
   t.detection_f1 = pr === 0 ? 0 : (2 * t.detection_precision * t.detection_recall) / pr;
   t.category_accuracy = ratio(t.category_correct, t.events_matched);
   t.occurred_at_pass_rate = ratio(t.occurred_at_within_tol, t.events_matched);
+  return t;
+}
 
-  return { ...meta, case_count: cases.length, totals: t, cases };
+export function scoreSuite(
+  cases: CaseResult[],
+  meta: { parse_version: string; model: string; generated_at: string },
+): SuiteReport {
+  const nonOverlap = cases.filter((c) => !c.fewShotOverlap);
+  const overlap = cases.filter((c) => c.fewShotOverlap);
+  const seg = (cs: CaseResult[]): SegmentReport => ({
+    case_count: cs.length,
+    totals: computeTotals(cs),
+  });
+  const total = seg(cases);
+  return {
+    ...meta,
+    case_count: cases.length,
+    totals: total.totals,
+    cases,
+    segments: { non_overlap: seg(nonOverlap), overlap: seg(overlap), total },
+  };
 }
 
 // ── 사람이 읽는 표 ───────────────────────────────────────────────────────────
@@ -340,7 +377,7 @@ export function renderTable(report: SuiteReport): string {
     const time = ev.matched === 0 ? "   – " : pct(ev.withinTolerance / ev.matched);
     const hyp =
       c.hypotheses.misclassifications > 0 ? `mis${c.hypotheses.misclassifications}` : "ok";
-    const flag = c.error ? " [ERROR]" : "";
+    const flag = (c.error ? " [ERROR]" : "") + (c.fewShotOverlap ? " ⚑few-shot" : "");
     lines.push(
       pad(c.name, 10) +
         "| " +
@@ -355,21 +392,37 @@ export function renderTable(report: SuiteReport): string {
     );
   }
   lines.push("-".repeat(74));
-  const t = report.totals;
-  lines.push("[지표 요약]");
-  lines.push(
+
+  // 세 구간으로 나눠 출력. 겹치지 않는 케이스(진짜 일반화)를 먼저 크게, 겹침은 참고,
+  // 전체는 하드 게이트 기준. (사용자 지시)
+  const metricLines = (t: SuiteTotals): string[] => [
     `  이벤트 검출  : recall ${pct(t.detection_recall)}  precision ${pct(t.detection_precision)}  F1 ${pct(t.detection_f1)}` +
       `   (matched ${t.events_matched}/${t.events_expected}, 미검출 ${t.events_missed}, 과검출 ${t.events_extra})`,
-  );
-  lines.push(
     `  카테고리 정확도 : ${pct(t.category_accuracy)}  (${t.category_correct}/${t.events_matched})`,
-  );
-  lines.push(
     `  occurred_at ±1h : ${pct(t.occurred_at_pass_rate)}  (${t.occurred_at_within_tol}/${t.events_matched})`,
-  );
+    `  가설/사실 오분류 : ${t.hypothesis_misclassifications} 건  (가설 matched ${t.hypotheses_matched}/${t.hypotheses_expected}, actual ${t.hypotheses_actual})`,
+  ];
+  const s = report.segments;
+
+  lines.push("");
+  lines.push(`━━━ 겹치지 않는 케이스 ${s.non_overlap.case_count}건 — 진짜 일반화 지표 ━━━`);
+  lines.push(...metricLines(s.non_overlap.totals));
+
+  lines.push("");
+  const overlapNames = report.cases
+    .filter((c) => c.fewShotOverlap)
+    .map((c) => c.name)
+    .join(", ");
   lines.push(
-    `  가설/사실 오분류 : ${t.hypothesis_misclassifications} 건  ` +
-      `(가설 matched ${t.hypotheses_matched}/${t.hypotheses_expected}, actual ${t.hypotheses_actual})  ← 가장 중요`,
+    `── few-shot 겹침 케이스 ${s.overlap.case_count}건 — 참고용(프롬프트에 정답 있음, 회귀 감시만) ──`,
   );
+  lines.push(...metricLines(s.overlap.totals));
+  if (s.overlap.case_count > 0) lines.push(`  [${overlapNames}]`);
+
+  lines.push("");
+  lines.push(`── 전체 ${s.total.case_count}건 — 하드 게이트(가설 오분류 0) 기준 ──`);
+  lines.push(...metricLines(s.total.totals));
+  lines.push("  ↑ 프롬프트 개선 판단은 맨 위 '겹치지 않는' 구간을 본다.");
+
   return lines.join("\n");
 }
