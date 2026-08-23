@@ -234,3 +234,75 @@ export async function getHypothesisDetail(
 
   return { hypothesis, matchedNames, occurrences, distinctDays };
 }
+
+// ── 대시보드 ─────────────────────────────────────────────────────────────────
+
+export type DashboardPeriod = 7 | 14 | 30 | "all";
+
+/** 대시보드에 넘기는 이벤트(행 그대로, payload 는 느슨하게). occurred_at 기준으로 집계한다. */
+export interface DashboardEvent {
+  id: string;
+  category: Category;
+  occurred_at: string;
+  occurred_at_precision: string;
+  payload: Record<string, unknown>;
+}
+
+export interface DashboardData {
+  period: DashboardPeriod;
+  dates: string[]; // KST YYYY-MM-DD, 오름차순, 시작일~오늘 연속(기록 없는 날도 포함)
+  events: DashboardEvent[]; // 기간 내 이벤트(occurred_at 오름차순)
+}
+
+/** YYYY-MM-DD 를 days 만큼 이동(UTC 순수 산술, tz 무관). (DateNav 와 동일 규칙) */
+function shiftYmd(date: string, days: number): string {
+  const d = new Date(`${date}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+/**
+ * 대시보드 데이터. **점수/상관/추세 계산을 하지 않는다** — 원자료(이벤트)와 날짜 축만
+ * 돌려주고, 히트맵·꺾은선·요약은 화면이 있는 그대로 그린다. (CLAUDE.md 원칙 6, 기획서 §3)
+ * 집계 기준은 occurred_at(발생 시각)의 KST 날짜다. 서버 전용(service role).
+ */
+export async function getDashboardData(
+  userId: string,
+  period: DashboardPeriod,
+): Promise<DashboardData> {
+  const supabase = getSupabaseClient();
+  const today = todayKstDate();
+
+  let startDate: string;
+  if (period === "all") {
+    // 전체: 가장 이른 이벤트의 KST 날짜부터. 이벤트가 없으면 오늘 하루만.
+    const { data: first, error: fErr } = await supabase
+      .from("events")
+      .select("occurred_at")
+      .eq("user_id", userId)
+      .order("occurred_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    if (fErr) throw new Error(fErr.message);
+    startDate = first ? kstDayKey((first as { occurred_at: string }).occurred_at) : today;
+  } else {
+    startDate = shiftYmd(today, -(period - 1)); // N일(오늘 포함)
+  }
+
+  const [startISO] = kstDayRange(startDate);
+  const endISO = kstDayRange(today)[1]; // 오늘 끝(다음날 00:00)
+
+  const { data, error } = await supabase
+    .from("events")
+    .select("id, category, occurred_at, occurred_at_precision, payload")
+    .eq("user_id", userId)
+    .gte("occurred_at", startISO)
+    .lt("occurred_at", endISO)
+    .order("occurred_at", { ascending: true });
+  if (error) throw new Error(error.message);
+
+  const dates: string[] = [];
+  for (let d = startDate; d <= today; d = shiftYmd(d, 1)) dates.push(d);
+
+  return { period, dates, events: (data ?? []) as DashboardEvent[] };
+}

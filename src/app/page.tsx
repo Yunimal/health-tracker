@@ -54,12 +54,20 @@ export default async function Page({
           <h1 className="text-lg font-semibold">오늘의 기록</h1>
           <UserBar label={user.label} />
         </div>
-        <Link
-          href="/hypotheses"
-          className="self-start rounded-full border border-gray-300 px-3 py-0.5 text-xs text-gray-600 hover:bg-gray-50"
-        >
-          가설 {openHypothesisCount}개 ›
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/hypotheses"
+            className="rounded-full border border-gray-300 px-3 py-0.5 text-xs text-gray-600 hover:bg-gray-50"
+          >
+            가설 {openHypothesisCount}개 ›
+          </Link>
+          <Link
+            href="/dashboard"
+            className="rounded-full border border-gray-300 px-3 py-0.5 text-xs text-gray-600 hover:bg-gray-50"
+          >
+            대시보드 ›
+          </Link>
+        </div>
         <TextEntryForm />
         <div className="flex items-center justify-between">
           <DateNav date={date} />
