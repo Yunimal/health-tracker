@@ -11,6 +11,7 @@ import { PROMPT_V6 } from "./prompts/v6";
 import { PROMPT_V7 } from "./prompts/v7";
 import { PROMPT_V8 } from "./prompts/v8";
 import { PROMPT_V9 } from "./prompts/v9";
+import { PROMPT_V10 } from "./prompts/v10";
 import type { Category, OccurredAtPrecision } from "@/lib/db/schema";
 
 /**
@@ -23,7 +24,7 @@ import type { Category, OccurredAtPrecision } from "@/lib/db/schema";
 /** 파싱 모델은 env(PARSE_MODEL)로 오버라이드. 기본값은 env.parseModel() 참고. */
 
 /** 프롬프트 파일명과 동기화한다. 프롬프트를 고치면 prompts/vN.ts 를 새로 만들고 이 값을 올린다. */
-export const PARSE_VERSION = "v9";
+export const PARSE_VERSION = "v10";
 
 // 출력 한도. 사고(thinking)는 꺼도(아래 callModel) 이벤트가 많은 원문은 출력이 길어진다 —
 // 카테고리 10개 + payload 필드 확장으로 이벤트당 출력이 늘어, 13건짜리 원문에서 11,779자가
@@ -136,6 +137,40 @@ const digestionPayloadSchema = z.object({
   note: z.string().nullable(),
 });
 
+// body_condition / body_care — 신체 부위. part enum 은 두 카테고리가 공유한다. (R23/R24)
+const bodyPartSchema = z.enum([
+  "scalp",
+  "hair",
+  "skin",
+  "vaginal",
+  "nail",
+  "oral",
+  "eye",
+  "armpit",
+  "foot",
+  "elbow",
+  "groin",
+  "libido",
+  "other",
+]);
+
+// body_condition — 상태(관찰). 방향 판정 필드 없음. self_rating 은 명시된 숫자만. (R23)
+const bodyConditionPayloadSchema = z.object({
+  part: bodyPartSchema,
+  description_text: z.string(),
+  self_rating: z.number().int().nullable(),
+  rating_scale: z.number().int().nullable(),
+  note: z.string().nullable(),
+});
+
+// body_care — 관리 행위. 상태(R23)와 섞지 않는다. (R24)
+const bodyCarePayloadSchema = z.object({
+  part: bodyPartSchema,
+  action_text: z.string(),
+  product_text: z.string().nullable(),
+  note: z.string().nullable(),
+});
+
 const eventBase = {
   occurred_at: z.string(),
   occurred_at_precision: precisionSchema,
@@ -153,6 +188,12 @@ const llmEventSchema = z.discriminatedUnion("category", [
   z.object({ category: z.literal("activity"), payload: activityPayloadSchema, ...eventBase }),
   z.object({ category: z.literal("appetite"), payload: appetitePayloadSchema, ...eventBase }),
   z.object({ category: z.literal("digestion"), payload: digestionPayloadSchema, ...eventBase }),
+  z.object({
+    category: z.literal("body_condition"),
+    payload: bodyConditionPayloadSchema,
+    ...eventBase,
+  }),
+  z.object({ category: z.literal("body_care"), payload: bodyCarePayloadSchema, ...eventBase }),
 ]);
 
 const hypothesisSchema = z.object({
@@ -205,6 +246,7 @@ const PROMPTS: Record<string, string> = {
   v7: PROMPT_V7,
   v8: PROMPT_V8,
   v9: PROMPT_V9,
+  v10: PROMPT_V10,
 };
 
 function loadSystemPrompt(version: string): string {

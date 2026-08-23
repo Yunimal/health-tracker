@@ -1,0 +1,42 @@
+{
+  "input": {
+    "transcript": "두피가 계속 가렵고 각질도 좀 생겼어. 5점 만점에 2점 정도로 상태가 안 좋아.",
+    "recorded_at": "2026-08-22T22:00:00+09:00",
+    "dictionary": {}
+  },
+  "expected": {
+    "events": [
+      {
+        "category": "body_condition",
+        "occurred_at": "2026-08-22T22:00:00+09:00",
+        "occurred_at_precision": "hour",
+        "payload": {
+          "part": "scalp",
+          "description_text": "계속 가려움",
+          "self_rating": 2,
+          "rating_scale": 5,
+          "note": null
+        },
+        "confidence": 0.8,
+        "needs_review": false
+      },
+      {
+        "category": "body_condition",
+        "occurred_at": "2026-08-22T22:00:00+09:00",
+        "occurred_at_precision": "hour",
+        "payload": {
+          "part": "scalp",
+          "description_text": "각질 생김",
+          "self_rating": null,
+          "rating_scale": null,
+          "note": null
+        },
+        "confidence": 0.8,
+        "needs_review": false
+      }
+    ],
+    "hypotheses": [],
+    "unparsed": []
+  },
+  "_covers": ["body_condition scalp 2건 분리(가려움+각질) (R23)", "self_rating=2/rating_scale=5 (\"5점 만점에 2점\") — 명시한 숫자만, 첫 관찰에 부착"]
+}

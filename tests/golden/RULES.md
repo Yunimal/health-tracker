@@ -408,6 +408,50 @@ payload:
 sleep 이벤트의 interruptions 로 기록한다. unparsed 로 보내지 않는다.
 횟수가 명시되면 그 값을, "자꾸" 처럼 모호하면 null 로 두고 note 에 원문을 남긴다.
 
+## R23. body_condition — 신체 부위의 상태
+
+payload:
+  part: 아래 중 하나 (필수)
+    scalp 두피 / hair 모발 / skin 피부 / vaginal 질 / nail 손발톱 /
+    oral 구강 / eye 눈 / armpit 겨드랑이 / foot 발 / elbow 팔꿈치 /
+    groin 사타구니 / libido 성욕 / other
+  description_text: 원문 표현 (필수)   "가렵다", "뒤집어졌다", "매끈해졌다"
+  self_rating: 정수 또는 null
+  rating_scale: 정수 또는 null
+  note: 문자열 또는 null
+
+- kind(issue/improvement/neutral) 같은 방향 판정 필드를 두지 않는다.
+  좋은 상태인지 나쁜 상태인지는 사람과 시기에 따라 다르다.
+  파서가 판정하면 그것이 판단 라벨이 된다. (CLAUDE.md 원칙 6)
+  방향이 필요하면 조회 시점에 description_text 로 판단한다.
+- 강도를 앱이 숫자로 매기지 않는다. 원문 표현을 보존한다.
+- self_rating 은 사용자가 명시적으로 말한 숫자만 채운다.
+  "5점 만점에 2점" → self_rating=2, rating_scale=5
+  말하지 않았으면 null. 서술을 보고 점수를 만들어내지 마라.
+  (한 발화에서 점수가 어느 관찰에 붙는지 애매하면 첫 번째 관찰에 붙인다)
+- 서로 다른 관찰은 분리한다. (R13 과 같은 원칙)
+  "두피 가렵고 각질도 있어" → 2건
+
+## R24. body_care — 관리 행위
+
+payload:
+  part: R23 과 동일한 enum
+  action_text: 원문 표현 (필수)   "제모함", "각질 제거", "미백크림 발랐어"
+  product_text: 원문 표현 또는 null
+  note: 문자열 또는 null
+
+- 서로 다른 행위는 분리한다. "각질 제거하고 크림 발랐어" → 2건
+- 상태(R23)와 행위(R24)를 섞지 않는다.
+  activity 와 근육통을 나눈 것과 같은 원칙이다.
+  "제모하고 나서 따가워" → body_care(제모) + body_condition(따가움) 2건
+  "~하고 나서" 는 R1 닫힌 목록에 없으므로 hypothesis 는 만들지 않는다.
+
+## 기존 카테고리 우선
+
+소화 감각 → digestion / 배변 → bowel / 생리 → menstrual 이 우선이다.
+body_condition 은 이들이 담지 않는 부위만 담는다.
+배 아픔은 digestion 이지 body_condition 이 아니다.
+
 ======================= 케이스별 확정 =======================
 
 | case | 항목 | 확정 |
@@ -459,6 +503,16 @@ sleep 이벤트의 interruptions 로 기록한다. unparsed 로 보내지 않는
 | 038 | 수면 중간 각성 | sleep(interruptions=null, note "자꾸 깸"). **unparsed 아님** (R22). "자꾸"는 모호 → null |
 | 039 | 자명한 인과 | food(아침 결식) + appetite(hunger). **hypothesis 없음** (R1 동어반복: 결식=공복) |
 | 040 | 지시어 원인 | food(커피) + energy(졸림) + hypothesis(커피→졸림). cause_hint 에 "그래서" 아니라 "커피" (R1 지시어) |
+| 041 | 두피+점수 | body_condition 2건 — scalp(가려움) + scalp(각질). 가려움에 self_rating=2, rating_scale=5. 점수는 첫 관찰에 (R23) |
+| 042 | 모발 | body_condition 2건 — hair(빠짐) + hair(푸석). 서로 다른 관찰 분리 (R23) |
+| 043 | 피부 나빠짐 | body_condition 1건 — skin. description_text 원문 보존, 방향 필드 없음 (R23) |
+| 044 | 피부 좋아짐 | body_condition 1건 — skin. 개선도 관찰로 남긴다(방향 판정 안 함) (R23) |
+| 045 | 질 상태 | body_condition 2건 — vaginal(가려움) + vaginal(따가움). 부위 상태라 menstrual 아님 (R23) |
+| 046 | 성욕 | body_condition 1건 — libido. 방향 판정 없이 원문 그대로 (R23) |
+| 047 | 각질 관리 | body_care 2건 — foot(각질 제거) + foot(풋크림, product_text 채움). 행위 분리 (R24) |
+| 048 | 미백 케어 | body_care 1건 — skin(미백크림, product_text="미백크림"). "자기 전"→23:30 hour (R24/R6) |
+| 049 | 경계 | digestion(pain) + body_condition(eye). 배 아픔은 digestion 우선, body_condition 아님 (기존 카테고리 우선) |
+| 050 | 상태/행위 분리 | body_care(armpit, 제모) + body_condition(armpit, 따가움) 2건. **hypothesis 없음** ("~하고 나서"=순서, R24/R1) |
 
 > case-023 은 hypothesis 를 만들지 않는다. "어제 등산 다녀왔는데 오늘 뻐근하네" 의 "~는데"는
 > R1 의 닫힌 인과 연결어 목록(~해서/~때문에/~라서/~인지/~탓에) 밖이고 비인과 용법이
@@ -532,3 +586,33 @@ DRAFT5 미해결 (규칙이 아직 안 다루는 것 — 채우지 않고 남김
   명시했으나 전용 골든 케이스 없음. 과생성/누락이 의심되면 케이스로 못박는다.
 - **R1 보강② not-found 변형(앞 문장에서도 원인 못 찾음 → 결과 fact 만, 가설 없음):** 규칙엔
   있으나 전용 골든 케이스 없음(040 은 found 케이스). 필요 시 추가.
+
+DRAFT6 확정(body_condition / body_care 카테고리):
+
+- **R23** 신설(body_condition): part enum 13종(scalp/hair/skin/vaginal/nail/oral/eye/armpit/foot/
+  elbow/groin/libido/other) · description_text 원문 보존(강도 숫자화 금지) · **방향(issue/improvement)
+  판정 필드 없음**(좋고 나쁨은 조회 시점에 판단, 파서가 판정하면 판단 라벨) · self_rating 은
+  명시된 숫자만(서술로 지어내지 않음) · 서로 다른 관찰 분리(R13).
+- **R24** 신설(body_care): part 는 R23 과 동일 enum · action_text/product_text 원문 보존 · 서로
+  다른 행위 분리 · **상태(R23)와 행위(R24) 분리**("제모하고 나서 따가워" → 2건, "~하고 나서"는
+  R1 밖이라 hypothesis 없음).
+- **기존 카테고리 우선** 명문화: 소화→digestion / 배변→bowel / 생리→menstrual. body_condition 은
+  이들이 담지 않는 부위만. "배 아픔"은 digestion(049).
+- 개수를 늘리는 대신 **부위(part)를 필드로 뺐다** — 부위가 늘어도 카테고리는 그대로.
+- confidence(R6): body_condition/body_care 는 amount 개념이 없어 페널티 없음(appetite/digestion 처럼).
+  precision 페널티만. 코드 변경 불필요(confidence.ts 가 non-food 를 이미 무페널티 처리).
+- case-041~050 확정. 카테고리 12개로 확장(**0010: events.category CHECK**). schema.ts(BodyPart 공유
+  enum + payload 2종)·index.ts zod·v10 프롬프트·format.ts(라벨/아이콘/부위 라벨/summarize) 갱신.
+  (payload 는 jsonb 라 payload 스키마 마이그레이션은 불필요)
+- ⚠️ **적용 순서: 0010 마이그레이션 먼저 → 배치 재파싱.** CHECK 확장 전에 v10 으로 재파싱하면
+  새 카테고리 INSERT 가 제약 위반으로 실패하고, reparseEntry 는 비원자적이라 기존 events 가
+  지워진 채 남는다(원문은 보존). (CLAUDE.md 원칙 2)
+
+DRAFT6 미해결 (규칙이 아직 안 다루는 것 — 채우지 않고 남김):
+
+- **케이스 미확보 part:** nail/oral/elbow/groin 은 enum 엔 있으나 골든 케이스가 없다. 실사용
+  데이터 확보되면 케이스 추가.
+- **지속 상태의 시각화:** "어제부터/요즘" 처럼 지속되는 상태(043 등)를 관찰 시점(recorded_at)으로
+  잡을지, 발단 시점으로 잡을지 잠정만 정함(관찰 시점 hour). 반복 진술이 잦아지면 별도 규칙화.
+- **self_rating 다른 척도:** "10점 만점에 8점" 등 5점 외 척도, 만점 미언급("2점"만) 시 rating_scale
+  처리는 전용 케이스 없음. 필요 시 추가.

@@ -40,6 +40,12 @@ const FIELD_LABEL: Record<string, string> = {
   distance_km: "거리(km)",
   intensity_text: "강도(원문)",
   controllable_text: "참을 수 있는지(원문)",
+  part: "부위",
+  description_text: "상태(원문)",
+  self_rating: "직접 매긴 점수",
+  rating_scale: "점수 만점",
+  action_text: "관리 행위(원문)",
+  product_text: "제품(원문)",
 };
 
 const CATEGORIES: Category[] = [
@@ -53,6 +59,8 @@ const CATEGORIES: Category[] = [
   "activity",
   "appetite",
   "digestion",
+  "body_condition",
+  "body_care",
 ];
 
 /** occurred_at(ISO, 대개 UTC) ↔ datetime-local. 입력창은 KST 벽시계로 취급한다. */
@@ -113,6 +121,21 @@ function initFields(category: Category, p: Record<string, unknown>): Fields {
       };
     case "digestion":
       return { kind: s("kind"), intensity_text: s("intensity_text"), note: s("note") };
+    case "body_condition":
+      return {
+        part: s("part"),
+        description_text: s("description_text"),
+        self_rating: n("self_rating"),
+        rating_scale: n("rating_scale"),
+        note: s("note"),
+      };
+    case "body_care":
+      return {
+        part: s("part"),
+        action_text: s("action_text"),
+        product_text: s("product_text"),
+        note: s("note"),
+      };
   }
 }
 
@@ -196,6 +219,23 @@ function buildPayload(
         ...base,
         kind: f.kind || "other",
         intensity_text: strOrNull(f.intensity_text!),
+        note: strOrNull(f.note!),
+      };
+    case "body_condition":
+      return {
+        ...base,
+        part: f.part || "other",
+        description_text: f.description_text ?? "",
+        self_rating: numOrNull(f.self_rating!),
+        rating_scale: numOrNull(f.rating_scale!),
+        note: strOrNull(f.note!),
+      };
+    case "body_care":
+      return {
+        ...base,
+        part: f.part || "other",
+        action_text: f.action_text ?? "",
+        product_text: strOrNull(f.product_text!),
         note: strOrNull(f.note!),
       };
   }

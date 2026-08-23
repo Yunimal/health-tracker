@@ -1,0 +1,27 @@
+{
+  "input": {
+    "transcript": "자기 전에 얼굴에 미백크림 꼼꼼히 발랐어.",
+    "recorded_at": "2026-08-22T23:30:00+09:00",
+    "dictionary": {}
+  },
+  "expected": {
+    "events": [
+      {
+        "category": "body_care",
+        "occurred_at": "2026-08-22T23:30:00+09:00",
+        "occurred_at_precision": "hour",
+        "payload": {
+          "part": "skin",
+          "action_text": "미백크림 바름",
+          "product_text": "미백크림",
+          "note": null
+        },
+        "confidence": 0.8,
+        "needs_review": false
+      }
+    ],
+    "hypotheses": [],
+    "unparsed": []
+  },
+  "_covers": ["body_care skin — 미백 케어, product_text=\"미백크림\" (R24)", "\"자기 전\" → 23:30 hour (R6)"]
+}

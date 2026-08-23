@@ -1,0 +1,42 @@
+{
+  "input": {
+    "transcript": "요즘 머리가 부쩍 많이 빠지고 머릿결도 푸석푸석해졌어.",
+    "recorded_at": "2026-08-22T09:00:00+09:00",
+    "dictionary": {}
+  },
+  "expected": {
+    "events": [
+      {
+        "category": "body_condition",
+        "occurred_at": "2026-08-22T09:00:00+09:00",
+        "occurred_at_precision": "hour",
+        "payload": {
+          "part": "hair",
+          "description_text": "머리가 많이 빠짐",
+          "self_rating": null,
+          "rating_scale": null,
+          "note": null
+        },
+        "confidence": 0.8,
+        "needs_review": false
+      },
+      {
+        "category": "body_condition",
+        "occurred_at": "2026-08-22T09:00:00+09:00",
+        "occurred_at_precision": "hour",
+        "payload": {
+          "part": "hair",
+          "description_text": "머릿결이 푸석푸석함",
+          "self_rating": null,
+          "rating_scale": null,
+          "note": null
+        },
+        "confidence": 0.8,
+        "needs_review": false
+      }
+    ],
+    "hypotheses": [],
+    "unparsed": []
+  },
+  "_covers": ["body_condition hair 2건 분리(빠짐+푸석) (R23)", "\"요즘\"(시간대 키워드 없음) → recorded_at hour (R6)"]
+}

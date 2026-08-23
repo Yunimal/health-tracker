@@ -1,0 +1,41 @@
+{
+  "input": {
+    "transcript": "겨드랑이 제모하고 나서 좀 따갑고 붉어졌어.",
+    "recorded_at": "2026-08-22T19:00:00+09:00",
+    "dictionary": {}
+  },
+  "expected": {
+    "events": [
+      {
+        "category": "body_care",
+        "occurred_at": "2026-08-22T19:00:00+09:00",
+        "occurred_at_precision": "hour",
+        "payload": {
+          "part": "armpit",
+          "action_text": "제모함",
+          "product_text": null,
+          "note": null
+        },
+        "confidence": 0.8,
+        "needs_review": false
+      },
+      {
+        "category": "body_condition",
+        "occurred_at": "2026-08-22T19:00:00+09:00",
+        "occurred_at_precision": "hour",
+        "payload": {
+          "part": "armpit",
+          "description_text": "좀 따갑고 붉어짐",
+          "self_rating": null,
+          "rating_scale": null,
+          "note": null
+        },
+        "confidence": 0.8,
+        "needs_review": false
+      }
+    ],
+    "hypotheses": [],
+    "unparsed": []
+  },
+  "_covers": ["관리 행위 + 결과 상태 분리: body_care(armpit 제모) + body_condition(armpit 따가움) (R24)", "\"~하고 나서\"는 순서(R1 비인과) → hypothesis 없음"]
+}

@@ -1,0 +1,42 @@
+{
+  "input": {
+    "transcript": "요 며칠 아래쪽이 좀 가렵고 따가운 느낌이 있어.",
+    "recorded_at": "2026-08-22T23:00:00+09:00",
+    "dictionary": {}
+  },
+  "expected": {
+    "events": [
+      {
+        "category": "body_condition",
+        "occurred_at": "2026-08-22T23:00:00+09:00",
+        "occurred_at_precision": "hour",
+        "payload": {
+          "part": "vaginal",
+          "description_text": "아래쪽이 좀 가려움",
+          "self_rating": null,
+          "rating_scale": null,
+          "note": null
+        },
+        "confidence": 0.8,
+        "needs_review": false
+      },
+      {
+        "category": "body_condition",
+        "occurred_at": "2026-08-22T23:00:00+09:00",
+        "occurred_at_precision": "hour",
+        "payload": {
+          "part": "vaginal",
+          "description_text": "아래쪽이 따가운 느낌",
+          "self_rating": null,
+          "rating_scale": null,
+          "note": null
+        },
+        "confidence": 0.8,
+        "needs_review": false
+      }
+    ],
+    "hypotheses": [],
+    "unparsed": []
+  },
+  "_covers": ["body_condition vaginal 2건 분리(가려움+따가움) (R23)", "부위 상태이므로 menstrual 아님 — 기존 카테고리 우선 경계"]
+}

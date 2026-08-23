@@ -1,0 +1,40 @@
+{
+  "input": {
+    "transcript": "아침부터 배가 살살 아프고 눈도 좀 뻑뻑해.",
+    "recorded_at": "2026-08-23T09:00:00+09:00",
+    "dictionary": {}
+  },
+  "expected": {
+    "events": [
+      {
+        "category": "digestion",
+        "occurred_at": "2026-08-23T08:00:00+09:00",
+        "occurred_at_precision": "part_of_day",
+        "payload": {
+          "kind": "pain",
+          "intensity_text": "살살",
+          "note": "배가 아픔"
+        },
+        "confidence": 0.8,
+        "needs_review": false
+      },
+      {
+        "category": "body_condition",
+        "occurred_at": "2026-08-23T08:00:00+09:00",
+        "occurred_at_precision": "part_of_day",
+        "payload": {
+          "part": "eye",
+          "description_text": "눈이 좀 뻑뻑함",
+          "self_rating": null,
+          "rating_scale": null,
+          "note": null
+        },
+        "confidence": 0.8,
+        "needs_review": false
+      }
+    ],
+    "hypotheses": [],
+    "unparsed": []
+  },
+  "_covers": ["경계: 배 아픔 → digestion(pain), body_condition 아님 (기존 카테고리 우선)", "눈 뻑뻑함 → body_condition eye. \"아침\" → 08:00 part_of_day (R6)"]
+}

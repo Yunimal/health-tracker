@@ -1,0 +1,40 @@
+{
+  "input": {
+    "transcript": "발뒤꿈치 각질 벗겨내고 풋크림 발랐어.",
+    "recorded_at": "2026-08-22T20:00:00+09:00",
+    "dictionary": {}
+  },
+  "expected": {
+    "events": [
+      {
+        "category": "body_care",
+        "occurred_at": "2026-08-22T20:00:00+09:00",
+        "occurred_at_precision": "hour",
+        "payload": {
+          "part": "foot",
+          "action_text": "각질 벗겨냄",
+          "product_text": null,
+          "note": null
+        },
+        "confidence": 0.8,
+        "needs_review": false
+      },
+      {
+        "category": "body_care",
+        "occurred_at": "2026-08-22T20:00:00+09:00",
+        "occurred_at_precision": "hour",
+        "payload": {
+          "part": "foot",
+          "action_text": "풋크림 바름",
+          "product_text": "풋크림",
+          "note": null
+        },
+        "confidence": 0.8,
+        "needs_review": false
+      }
+    ],
+    "hypotheses": [],
+    "unparsed": []
+  },
+  "_covers": ["body_care foot 2건 분리(각질 제거 + 크림 도포) (R24)", "product_text=\"풋크림\" 채움"]
+}

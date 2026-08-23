@@ -13,6 +13,8 @@ export const CATEGORY_LABEL: Record<Category, string> = {
   activity: "운동",
   appetite: "식욕",
   digestion: "소화",
+  body_condition: "몸 상태",
+  body_care: "몸 관리",
 };
 
 /** 한글 라벨과 함께 쓰는 아이콘. 영어 코드명은 화면에 노출하지 않는다. */
@@ -27,6 +29,25 @@ export const CATEGORY_ICON: Record<Category, string> = {
   activity: "🏃",
   appetite: "🥣",
   digestion: "🌀",
+  body_condition: "🩺",
+  body_care: "🧴",
+};
+
+/** 신체 부위(body_condition/body_care)의 한글 라벨. 영어 코드명은 화면에 노출하지 않는다. (R23) */
+export const BODY_PART_LABEL: Record<string, string> = {
+  scalp: "두피",
+  hair: "모발",
+  skin: "피부",
+  vaginal: "질",
+  nail: "손발톱",
+  oral: "구강",
+  eye: "눈",
+  armpit: "겨드랑이",
+  foot: "발",
+  elbow: "팔꿈치",
+  groin: "사타구니",
+  libido: "성욕",
+  other: "기타",
 };
 
 const SOURCE_LABEL: Record<string, string> = { voice: "음성", text: "텍스트" };
@@ -298,6 +319,31 @@ export function summarizeEvent(category: Category, payload: Record<string, unkno
       const parts: string[] = [KIND[str(p, "kind") ?? ""] ?? "소화"];
       const intensity = str(p, "intensity_text");
       if (intensity) parts.push(intensity);
+      const note = str(p, "note");
+      if (note) parts.push(note);
+      return parts.join(" · ");
+    }
+    case "body_condition": {
+      // 부위 + 원문 서술. 점수는 사용자가 직접 매긴 것만 표시(파서 판정 아님). (R23)
+      const partLabel = BODY_PART_LABEL[str(p, "part") ?? ""] ?? "";
+      const desc = str(p, "description_text") ?? "상태";
+      const parts: string[] = partLabel ? [`${partLabel} · ${desc}`] : [desc];
+      const rating = num(p, "self_rating");
+      if (rating != null) {
+        const scale = num(p, "rating_scale");
+        parts.push(scale != null ? `${rating}/${scale}점` : `${rating}점`);
+      }
+      const note = str(p, "note");
+      if (note) parts.push(note);
+      return parts.join(" · ");
+    }
+    case "body_care": {
+      // 부위 + 관리 행위(원문) + 제품(원문). (R24)
+      const partLabel = BODY_PART_LABEL[str(p, "part") ?? ""] ?? "";
+      const action = str(p, "action_text") ?? "관리";
+      const parts: string[] = partLabel ? [`${partLabel} · ${action}`] : [action];
+      const product = str(p, "product_text");
+      if (product) parts.push(product);
       const note = str(p, "note");
       if (note) parts.push(note);
       return parts.join(" · ");

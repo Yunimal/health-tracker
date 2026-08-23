@@ -16,7 +16,9 @@ export type Category =
   | "medication"
   | "activity"
   | "appetite"
-  | "digestion";
+  | "digestion"
+  | "body_condition"
+  | "body_care";
 export type OccurredAtPrecision = "exact" | "hour" | "part_of_day" | "date";
 export type HypothesisStatus = "open" | "supported" | "not_supported" | "dismissed";
 
@@ -138,6 +140,41 @@ export interface DigestionPayload {
   note: string | null;
 }
 
+// body_condition / body_care — 신체 부위의 상태(관찰)와 관리(행위). (RULES R23/R24)
+// part enum 은 두 카테고리가 하나의 목록을 공유한다. 개수를 늘리는 대신 부위를 필드로 뺀다.
+export type BodyPart =
+  | "scalp" // 두피
+  | "hair" // 모발
+  | "skin" // 피부
+  | "vaginal" // 질
+  | "nail" // 손발톱
+  | "oral" // 구강
+  | "eye" // 눈
+  | "armpit" // 겨드랑이
+  | "foot" // 발
+  | "elbow" // 팔꿈치
+  | "groin" // 사타구니
+  | "libido" // 성욕
+  | "other";
+
+// body_condition — 상태(관찰). 방향(issue/improvement)을 판정하는 필드를 두지 않는다:
+// 좋고 나쁨은 사람·시기에 따라 다르고, 파서가 판정하면 판단 라벨이 된다. (CLAUDE.md 원칙 6)
+export interface BodyConditionPayload {
+  part: BodyPart;
+  description_text: string; // 상태를 말한 그대로. "가렵다", "뒤집어졌다", "매끈해졌다"
+  self_rating: number | null; // 사용자가 명시적으로 말한 점수만. 서술로 지어내지 않는다.
+  rating_scale: number | null; // 그 점수의 만점. "5점 중 2점" → 5
+  note: string | null;
+}
+
+// body_care — 관리 행위(내가 한 것). 상태(R23)와 섞지 않는다.
+export interface BodyCarePayload {
+  part: BodyPart;
+  action_text: string; // 관리 행위를 말한 그대로. "제모함", "각질 제거", "미백크림 발랐어"
+  product_text: string | null; // 사용한 제품 원문. 없으면 null
+  note: string | null;
+}
+
 export type EventPayload =
   | FoodPayload
   | MoodPayload
@@ -148,7 +185,9 @@ export type EventPayload =
   | MedicationPayload
   | ActivityPayload
   | AppetitePayload
-  | DigestionPayload;
+  | DigestionPayload
+  | BodyConditionPayload
+  | BodyCarePayload;
 
 // ── raw_entries ────────────────────────────────────────────────────────────
 export interface RawEntry {
@@ -226,6 +265,14 @@ export interface DigestionEvent extends EventBase {
   category: "digestion";
   payload: DigestionPayload;
 }
+export interface BodyConditionEvent extends EventBase {
+  category: "body_condition";
+  payload: BodyConditionPayload;
+}
+export interface BodyCareEvent extends EventBase {
+  category: "body_care";
+  payload: BodyCarePayload;
+}
 
 export type Event =
   | FoodEvent
@@ -237,7 +284,9 @@ export type Event =
   | MedicationEvent
   | ActivityEvent
   | AppetiteEvent
-  | DigestionEvent;
+  | DigestionEvent
+  | BodyConditionEvent
+  | BodyCareEvent;
 
 // ── hypotheses ─────────────────────────────────────────────────────────────
 export interface Hypothesis {

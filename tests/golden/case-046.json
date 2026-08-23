@@ -1,0 +1,28 @@
+{
+  "input": {
+    "transcript": "요즘 들어 통 성욕이 없네.",
+    "recorded_at": "2026-08-22T21:00:00+09:00",
+    "dictionary": {}
+  },
+  "expected": {
+    "events": [
+      {
+        "category": "body_condition",
+        "occurred_at": "2026-08-22T21:00:00+09:00",
+        "occurred_at_precision": "hour",
+        "payload": {
+          "part": "libido",
+          "description_text": "통 성욕이 없음",
+          "self_rating": null,
+          "rating_scale": null,
+          "note": null
+        },
+        "confidence": 0.8,
+        "needs_review": false
+      }
+    ],
+    "hypotheses": [],
+    "unparsed": []
+  },
+  "_covers": ["body_condition libido — 성욕 언급 (R23)", "방향(issue/좋고나쁨) 판정하지 않고 원문 그대로"]
+}
