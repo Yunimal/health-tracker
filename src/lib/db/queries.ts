@@ -306,3 +306,58 @@ export async function getDashboardData(
 
   return { period, dates, events: (data ?? []) as DashboardEvent[] };
 }
+
+// 기간 첫날들의 lookback 창(최대 36h)을 채우기 위해 시작일보다 앞선 이벤트까지 가져올 여유(일).
+// (docs/analysis-design.md: 호출부가 기간 + 최대 lookback 만큼 앞선 이벤트를 넘겨야 한다)
+const ANALYSIS_BUFFER_DAYS = 2;
+
+export interface AnalysisFetch {
+  events: DashboardEvent[]; // 기간 + 버퍼 구간의 이벤트(occurred_at 오름차순). compareOutcome 에 그대로 넘긴다.
+  periodDays: number; // 분류 대상 일수(기간 시작일~오늘 포함). compareOutcome 의 periodDays.
+  today: string; // KST YYYY-MM-DD
+}
+
+/**
+ * "결과 ← 원인" 분석용 이벤트 페치. getDashboardData 와 달리 **기간 시작보다 버퍼만큼 앞선
+ * 이벤트까지** 가져온다 — compareOutcome 의 lookback 창이 기간 첫날에서 잘리지 않게. (기획서 §3)
+ * 분류(good/bad/unknown)는 compareOutcome 이 periodDays 로 기간 안에서만 한다. 서버 전용.
+ */
+export async function getEventsForAnalysis(
+  userId: string,
+  period: DashboardPeriod,
+): Promise<AnalysisFetch> {
+  const supabase = getSupabaseClient();
+  const today = todayKstDate();
+
+  let startDate: string;
+  if (period === "all") {
+    const { data: first, error: fErr } = await supabase
+      .from("events")
+      .select("occurred_at")
+      .eq("user_id", userId)
+      .order("occurred_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    if (fErr) throw new Error(fErr.message);
+    startDate = first ? kstDayKey((first as { occurred_at: string }).occurred_at) : today;
+  } else {
+    startDate = shiftYmd(today, -(period - 1));
+  }
+
+  let periodDays = 0;
+  for (let d = startDate; d <= today; d = shiftYmd(d, 1)) periodDays++;
+
+  const [startISO] = kstDayRange(shiftYmd(startDate, -ANALYSIS_BUFFER_DAYS));
+  const endISO = kstDayRange(today)[1];
+
+  const { data, error } = await supabase
+    .from("events")
+    .select("id, category, occurred_at, occurred_at_precision, payload")
+    .eq("user_id", userId)
+    .gte("occurred_at", startISO)
+    .lt("occurred_at", endISO)
+    .order("occurred_at", { ascending: true });
+  if (error) throw new Error(error.message);
+
+  return { events: (data ?? []) as DashboardEvent[], periodDays, today };
+}

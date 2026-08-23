@@ -205,3 +205,48 @@ export async function setHypothesisStatus(
   revalidatePath("/"); // 메인의 "가설 N개" 카운트도 갱신
   return { ok: true };
 }
+
+/**
+ * 대시보드 비교표의 원인 후보를 가설로 저장한다. (분석 → 검증 루프)
+ * cause_hint = 항목명, effect_hint = 결과 라벨, statement = "X 가 Y 에 영향을 주나?" 형태.
+ * 같은(cause,effect) open 가설이 이미 있으면 중복 생성하지 않는다(멱등).
+ * 음성 발화에서 나온 가설이 아니므로 raw_entry_id 없이 만든다(mention 없음). 재파싱이 이 행을
+ * 지우지 않는다 — persistHypotheses 는 원문에 링크된 가설만 건드린다. (persist.ts 참고)
+ */
+export async function createHypothesisFromFactor(
+  cause: string,
+  effectLabel: string,
+): Promise<ActionResult> {
+  const supabase = getSupabaseClient();
+  const user = await currentWebUser();
+  if (!user) return { ok: false, error: "로그인이 필요합니다" };
+  const c = cause.trim();
+  const e = effectLabel.trim();
+  if (!c || !e) return { ok: false, error: "빈 값" };
+
+  // 중복 방지: 같은 사용자의 open 가설 중 cause/effect 가 같으면 다시 만들지 않는다.
+  const { data: dup, error: dErr } = await supabase
+    .from("hypotheses")
+    .select("id")
+    .eq("user_id", user.id)
+    .eq("status", "open")
+    .eq("cause_hint", c)
+    .eq("effect_hint", e)
+    .maybeSingle();
+  if (dErr) return { ok: false, error: dErr.message };
+  if (dup) return { ok: true }; // 이미 저장됨 — 멱등
+
+  const statement = `${c} 가 ${e} 에 영향을 주나?`;
+  const { error } = await supabase.from("hypotheses").insert({
+    user_id: user.id,
+    statement,
+    recent_statement: statement,
+    cause_hint: c,
+    effect_hint: e,
+    mention_count: 1,
+  });
+  if (error) return { ok: false, error: error.message };
+  revalidatePath("/hypotheses");
+  revalidatePath("/");
+  return { ok: true };
+}
