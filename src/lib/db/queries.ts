@@ -311,8 +311,21 @@ export async function getDashboardData(
 // (docs/analysis-design.md: 호출부가 기간 + 최대 lookback 만큼 앞선 이벤트를 넘겨야 한다)
 const ANALYSIS_BUFFER_DAYS = 2;
 
+/** 분석용 이벤트. DashboardEvent + 원문(transcript)·기록일(recorded_at) — 상세 화면이 원문을
+ *  그대로 보여주고 타임라인(/?date=)으로 링크할 수 있게. (LLM 요약 없이 원문 그대로) */
+export interface InsightEvent {
+  id: string;
+  raw_entry_id: string;
+  category: Category;
+  occurred_at: string;
+  occurred_at_precision: string;
+  payload: Record<string, unknown>;
+  transcript: string; // raw_entries.transcript (불변 원문)
+  recorded_at: string; // raw_entries.recorded_at (타임라인 날짜)
+}
+
 export interface AnalysisFetch {
-  events: DashboardEvent[]; // 기간 + 버퍼 구간의 이벤트(occurred_at 오름차순). compareOutcome 에 그대로 넘긴다.
+  events: InsightEvent[]; // 기간 + 버퍼 구간의 이벤트(occurred_at 오름차순). compareOutcome 에 그대로 넘긴다.
   periodDays: number; // 분류 대상 일수(기간 시작일~오늘 포함). compareOutcome 의 periodDays.
   today: string; // KST YYYY-MM-DD
 }
@@ -352,12 +365,32 @@ export async function getEventsForAnalysis(
 
   const { data, error } = await supabase
     .from("events")
-    .select("id, category, occurred_at, occurred_at_precision, payload")
+    .select(
+      "id, raw_entry_id, category, occurred_at, occurred_at_precision, payload, raw_entries(transcript, recorded_at)",
+    )
     .eq("user_id", userId)
     .gte("occurred_at", startISO)
     .lt("occurred_at", endISO)
     .order("occurred_at", { ascending: true });
   if (error) throw new Error(error.message);
 
-  return { events: (data ?? []) as DashboardEvent[], periodDays, today };
+  // raw_entries 임베드는 to-one 이라 객체지만, 방어적으로 배열도 처리한다.
+  type Row = Omit<InsightEvent, "transcript" | "recorded_at"> & {
+    raw_entries: { transcript: string; recorded_at: string } | { transcript: string; recorded_at: string }[] | null;
+  };
+  const events: InsightEvent[] = ((data ?? []) as Row[]).map((row) => {
+    const re = Array.isArray(row.raw_entries) ? row.raw_entries[0] : row.raw_entries;
+    return {
+      id: row.id,
+      raw_entry_id: row.raw_entry_id,
+      category: row.category,
+      occurred_at: row.occurred_at,
+      occurred_at_precision: row.occurred_at_precision,
+      payload: row.payload,
+      transcript: re?.transcript ?? "",
+      recorded_at: re?.recorded_at ?? row.occurred_at,
+    };
+  });
+
+  return { events, periodDays, today };
 }

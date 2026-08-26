@@ -38,10 +38,18 @@ export interface FactorComparison {
   difference: number; // (goodCount/goodTotal) − (badCount/badTotal). 정렬용. 점수 아님.
 }
 
+/** 분류된 하루. 상세 화면이 lookback 창을 다시 만들 때 anchor 를 쓴다. */
+export interface ClassifiedDay {
+  date: string;
+  group: "good" | "bad";
+  anchor: string; // 이 날 결과 시점(창의 끝)
+}
+
 export interface OutcomeComparison {
   goodDays: string[];
   badDays: string[];
   unknownDays: string[];
+  classified: ClassifiedDay[]; // good + bad, anchor 포함(상세용)
   factors: FactorComparison[];
   enoughData: boolean;
   minSamplesNeeded: number;
@@ -75,7 +83,7 @@ function endOfDayIso(day: string): string {
   return `${day}T23:59:59.999+09:00`;
 }
 
-interface ClassifiedDay {
+interface DayAnchor {
   day: string;
   anchor: string; // 이 날 결과 시점(창의 끝)
 }
@@ -108,8 +116,8 @@ export function compareOutcome(
     else byDay.set(d, [e]);
   }
 
-  const good: ClassifiedDay[] = [];
-  const bad: ClassifiedDay[] = [];
+  const good: DayAnchor[] = [];
+  const bad: DayAnchor[] = [];
   const unknownDays: string[] = [];
 
   for (const day of days) {
@@ -171,10 +179,16 @@ export function compareOutcome(
     };
   });
 
+  const classified: ClassifiedDay[] = [
+    ...good.map((d) => ({ date: d.day, group: "good" as const, anchor: d.anchor })),
+    ...bad.map((d) => ({ date: d.day, group: "bad" as const, anchor: d.anchor })),
+  ];
+
   return {
     goodDays: good.map((d) => d.day),
     badDays: bad.map((d) => d.day),
     unknownDays,
+    classified,
     factors,
     enoughData: good.length >= MIN_SAMPLES && bad.length >= MIN_SAMPLES,
     minSamplesNeeded: MIN_SAMPLES,

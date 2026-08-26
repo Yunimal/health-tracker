@@ -1,27 +1,28 @@
 import Link from "next/link";
-import type { DashboardEvent, DashboardPeriod } from "@/lib/db/queries";
-import { OUTCOMES, getOutcome } from "@/lib/analysis/outcomes";
-import { compareOutcome, type OutcomeComparison } from "@/lib/analysis/compare";
-import SaveHypothesisButton from "./SaveHypothesisButton";
+import { formatWhen, summarizeEvent } from "@/lib/format";
+import type { DashboardPeriod, InsightEvent } from "@/lib/db/queries";
+import { OUTCOMES, getOutcome, kstDateOf, readScaleValue } from "@/lib/analysis/outcomes";
+import { compareOutcome, withinLookback } from "@/lib/analysis/compare";
+import { extractInputFactors } from "@/lib/analysis/inputs";
+import FactorTable, { type FactorRow, type Occurrence } from "./FactorTable";
 
 /**
  * "무엇이 영향을 줄까" 탭 — outcomes 레지스트리를 읽어 결과를 고르고, 좋았던 날/나빴던 날의
  * 원인 후보를 나란히 보여준다. **상관·확률·결론을 계산하지 않는다.** 단순 빈도(N일 중 M일)만.
- * (기획서 §3, docs/analysis-design.md, CLAUDE.md 원칙 6)
+ * 화면 라벨은 판단어가 아니라 관찰 사실(goodLabel/badLabel). (기획서 §3, CLAUDE.md 원칙 6)
  */
 
-/** "2026-08-23" → "8/23" (칩 표시용). */
-function shortDay(ymd: string): string {
+const shortDay = (ymd: string) => {
   const [, m, d] = ymd.split("-");
   return `${Number(m)}/${Number(d)}`;
-}
+};
 
-function DayChips({ days }: { days: string[] }) {
+function DayChips({ days, cls }: { days: string[]; cls: string }) {
   if (days.length === 0) return <span className="text-[11px] text-gray-300">없음</span>;
   return (
     <span className="flex flex-wrap gap-1">
       {days.map((d) => (
-        <span key={d} className="rounded bg-gray-100 px-1.5 py-0.5 text-[11px] text-gray-600">
+        <span key={d} className={`rounded px-1.5 py-0.5 text-[11px] ${cls}`}>
           {shortDay(d)}
         </span>
       ))}
@@ -36,13 +37,13 @@ export default function InsightsTab({
   selectedId,
   period,
 }: {
-  events: DashboardEvent[];
+  events: InsightEvent[];
   periodDays: number;
   today: string;
   selectedId: string;
   period: DashboardPeriod;
 }) {
-  // 각 결과의 비교 결과를 한 번씩 계산(버튼의 "N일" 표시 + 선택된 결과 상세에 재사용).
+  // 각 결과의 비교를 한 번씩 계산(버튼의 "N일" 표시 + 선택된 결과 상세에 재사용).
   const computed = OUTCOMES.map((o) => ({
     outcome: o,
     cmp: compareOutcome(o.id, events, periodDays, { today }),
@@ -50,11 +51,13 @@ export default function InsightsTab({
 
   const selected = getOutcome(selectedId) ?? OUTCOMES[0]!;
   const current = computed.find((c) => c.outcome.id === selected.id)!;
-  const cmp: OutcomeComparison = current.cmp;
-  const classifiedOf = (c: OutcomeComparison) => c.goodDays.length + c.badDays.length;
+  const cmp = current.cmp;
+  const classifiedCount = (c: (typeof computed)[number]["cmp"]) =>
+    c.goodDays.length + c.badDays.length;
 
-  // 원인 후보: difference 내림차순, 상위 10개. (difference 는 정렬용일 뿐 — 점수로 보여주지 않는다)
-  const topFactors = [...cmp.factors].sort((a, b) => b.difference - a.difference).slice(0, 10);
+  // 색: 좋음=청록, 나쁨=붉음(craving 은 옅은 호박). 판단 보류=회색.
+  const goodChip = "bg-teal-50 text-teal-700";
+  const badChip = selected.badMuted ? "bg-amber-50 text-amber-700" : "bg-rose-50 text-rose-700";
 
   return (
     <div className="flex flex-col gap-4">
@@ -64,7 +67,6 @@ export default function InsightsTab({
         <div className="flex flex-wrap gap-2">
           {computed.map(({ outcome, cmp: c }) => {
             const active = outcome.id === selected.id;
-            const days = classifiedOf(c);
             return (
               <Link
                 key={outcome.id}
@@ -77,7 +79,7 @@ export default function InsightsTab({
               >
                 {outcome.label}
                 <span className={active ? "ml-1 text-gray-300" : "ml-1 text-gray-400"}>
-                  · {days}일
+                  · {classifiedCount(c)}일
                 </span>
               </Link>
             );
@@ -93,7 +95,7 @@ export default function InsightsTab({
       {/* 3. presence 결과 한계 안내 */}
       {selected.kind === "presence" && (
         <p className="rounded border border-gray-200 bg-gray-50 px-3 py-2 text-[11px] text-gray-500">
-          &lsquo;없었음&rsquo; 은 &lsquo;말하지 않음&rsquo; 을 포함해요. 기록이 3건 이상인 날만 셌습니다.
+          &lsquo;{selected.goodLabel}&rsquo; 은 &lsquo;말하지 않음&rsquo; 을 포함해요. 기록이 3건 이상인 날만 셌습니다.
         </p>
       )}
 
@@ -101,59 +103,132 @@ export default function InsightsTab({
         // 2-a. 데이터 부족 — 비교표 대신 지금까지 기록된 날을 보여준다(뭘 더 기록해야 하는지)
         <section className="flex flex-col gap-3">
           <p className="rounded-lg border border-gray-300 px-3 py-3 text-sm text-gray-700">
-            좋았던 날 {cmp.goodDays.length}일 / 나빴던 날 {cmp.badDays.length}일 — 비교하려면 각각{" "}
-            {cmp.minSamplesNeeded}일이 필요해요.
+            <span className="text-teal-700">{selected.goodLabel}</span> {cmp.goodDays.length}일 /{" "}
+            <span className={selected.badMuted ? "text-amber-700" : "text-rose-700"}>
+              {selected.badLabel}
+            </span>{" "}
+            {cmp.badDays.length}일 — 비교하려면 각각 {cmp.minSamplesNeeded}일이 필요해요.
           </p>
           <div className="flex flex-col gap-2 text-sm">
             <div className="flex flex-col gap-1">
-              <span className="text-xs text-gray-500">좋았던 날 ({cmp.goodDays.length}일)</span>
-              <DayChips days={cmp.goodDays} />
+              <span className="text-xs text-teal-700">
+                {selected.goodLabel} ({cmp.goodDays.length}일)
+              </span>
+              <DayChips days={cmp.goodDays} cls={goodChip} />
             </div>
             <div className="flex flex-col gap-1">
-              <span className="text-xs text-gray-500">나빴던 날 ({cmp.badDays.length}일)</span>
-              <DayChips days={cmp.badDays} />
+              <span className={`text-xs ${selected.badMuted ? "text-amber-700" : "text-rose-700"}`}>
+                {selected.badLabel} ({cmp.badDays.length}일)
+              </span>
+              <DayChips days={cmp.badDays} cls={badChip} />
             </div>
             <div className="flex flex-col gap-1">
               <span className="text-xs text-gray-400">
                 아직 판단 못 한 날 ({cmp.unknownDays.length}일) — 결과 기록이 없거나 부족한 날
               </span>
-              <DayChips days={cmp.unknownDays} />
+              <DayChips days={cmp.unknownDays} cls="bg-gray-100 text-gray-500" />
             </div>
           </div>
         </section>
       ) : (
-        // 2-b. 데이터 충분 — 원인 후보 비교표
-        <section className="flex flex-col gap-2">
-          <div className="flex items-baseline justify-between">
-            <h3 className="text-sm font-medium">원인 후보</h3>
-            <span className="text-[11px] text-gray-400">각 칸 = 그 항목이 나타난 날 수</span>
-          </div>
-
-          {/* 헤더: 표본 수(N일)를 항상 노출 */}
-          <div className="flex items-center gap-2 border-b border-gray-200 pb-1 text-[11px] text-gray-500">
-            <span className="flex-1">항목</span>
-            <span className="w-14 text-right">좋음 {cmp.goodDays.length}일</span>
-            <span className="w-14 text-right">나쁨 {cmp.badDays.length}일</span>
-            <span className="w-16" />
-          </div>
-
-          <ul className="flex flex-col">
-            {topFactors.map((f) => (
-              <li key={f.id} className="flex items-center gap-2 border-b border-gray-100 py-1.5">
-                <span className="min-w-0 flex-1 truncate text-sm">{f.label}</span>
-                <span className="w-14 text-right text-sm tabular-nums">{f.goodCount}일</span>
-                <span className="w-14 text-right text-sm tabular-nums">{f.badCount}일</span>
-                <span className="flex w-16 justify-end">
-                  <SaveHypothesisButton cause={f.label} effectLabel={selected.label} />
-                </span>
-              </li>
-            ))}
-          </ul>
-          <p className="text-[11px] text-gray-400">
-            숫자가 큰 차이여도 표본이 적으면 우연일 수 있어요. 나란히 보고 직접 판단하세요.
-          </p>
-        </section>
+        // 2-b. 데이터 충분 — 원인 후보 비교표 + 인라인 상세
+        <FactorTable
+          rows={buildFactorRows(selected, cmp, events)}
+          goodTotal={cmp.goodDays.length}
+          badTotal={cmp.badDays.length}
+          goodLabel={selected.goodLabel}
+          badLabel={selected.badLabel}
+          badMuted={!!selected.badMuted}
+          effectLabel={selected.label}
+          showValues={selected.kind === "scale"}
+        />
       )}
     </div>
   );
+}
+
+/**
+ * 비교표 상위 10행에 인라인 상세 데이터를 붙인다. **LLM 호출 없이** 원문·요약·결과값만 모은다.
+ * (difference 내림차순 상위 10 — difference 는 정렬용, 화면엔 노출하지 않는다)
+ */
+function buildFactorRows(
+  selected: (typeof OUTCOMES)[number],
+  cmp: ReturnType<typeof compareOutcome>,
+  events: InsightEvent[],
+): FactorRow[] {
+  // 분류된 날마다: 그날의 결과 요약/값(상세의 outcomeSummary·결과값 목록) + lookback 창.
+  const info = new Map<string, { summary: string; value: number | null }>();
+  const windowByDate = new Map<string, InsightEvent[]>();
+  for (const cd of cmp.classified) {
+    const dayOutcome = events.filter(
+      (e) => e.category === selected.category && kstDateOf(e.occurred_at) === cd.date,
+    );
+    let summary = "";
+    let value: number | null = null;
+    if (selected.kind === "scale") {
+      const vals = dayOutcome
+        .map((e) => readScaleValue(selected, e.payload))
+        .filter((v): v is number => v != null);
+      value = vals.length ? Math.round((vals.reduce((s, v) => s + v, 0) / vals.length) * 10) / 10 : null;
+      const latest = [...dayOutcome].sort(
+        (a, b) => Date.parse(b.occurred_at) - Date.parse(a.occurred_at),
+      )[0];
+      summary = latest ? summarizeEvent(latest.category, latest.payload) : "";
+    } else {
+      const matching = dayOutcome.filter((e) => selected.match(e.payload));
+      summary =
+        cd.group === "bad" && matching[0]
+          ? summarizeEvent(matching[0].category, matching[0].payload)
+          : "해당 없음";
+    }
+    info.set(cd.date, { summary, value });
+    windowByDate.set(
+      cd.date,
+      events.filter((e) => withinLookback(e.occurred_at, cd.anchor, selected.lookbackHours)),
+    );
+  }
+
+  const inputById = new Map(extractInputFactors(events).map((f) => [f.id, f]));
+  const top = [...cmp.factors].sort((a, b) => b.difference - a.difference).slice(0, 10);
+
+  return top.map((fc) => {
+    const inp = inputById.get(fc.id)!;
+    const occurrences: Occurrence[] = [];
+    for (const cd of cmp.classified) {
+      const matched = inp.select(windowByDate.get(cd.date) ?? []);
+      if (matched.length === 0) continue;
+      occurrences.push({
+        date: cd.date,
+        group: cd.group,
+        outcomeSummary: info.get(cd.date)!.summary,
+        events: (matched as InsightEvent[]).map((e) => ({
+          time: formatWhen(e.occurred_at, e.occurred_at_precision),
+          summary: summarizeEvent(e.category, e.payload),
+          transcript: e.transcript,
+          recordedDate: kstDateOf(e.recorded_at),
+        })),
+      });
+    }
+    occurrences.sort((a, b) => a.date.localeCompare(b.date));
+
+    // 전체 기간 등장 집계(분류 여부 무관).
+    const appearDates = [
+      ...new Set(inp.select(events).map((e) => kstDateOf(e.occurred_at))),
+    ].sort();
+    const outcomeValues = occurrences
+      .map((o) => info.get(o.date)!.value)
+      .filter((v): v is number => v != null);
+
+    return {
+      id: fc.id,
+      label: fc.label,
+      goodCount: fc.goodCount,
+      badCount: fc.badCount,
+      appearCount: appearDates.length,
+      firstDay: appearDates[0] ?? null,
+      lastDay: appearDates[appearDates.length - 1] ?? null,
+      outcomeValues,
+      occurrences,
+    };
+  });
 }

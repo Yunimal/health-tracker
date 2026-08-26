@@ -19,8 +19,20 @@ export interface AnalysisEvent {
 
 export type NumRange = [number, number];
 
+/**
+ * 화면 라벨은 판단어("좋음/나쁨")가 아니라 **관찰 사실**로 쓴다. 무엇이 좋고 나쁜지는
+ * 사용자 기준이라 앱이 단정하지 않는다. goodLabel 은 compare 의 goodDays 쪽, badLabel 은
+ * badDays 쪽에 대응한다. (CLAUDE.md 원칙 6)
+ */
+interface OutcomeLabels {
+  goodLabel: string; // 예: "잘 잔 날"
+  badLabel: string; // 예: "못 잔 날"
+  // 나쁜 쪽을 붉게 강조하지 않고 옅은 호박색으로 절제한다(자책 도구가 되지 않게). craving 용.
+  badMuted?: boolean;
+}
+
 /** 숫자 필드가 있는 결과. 값의 구간으로 좋음/나쁨을 나눈다. */
-export interface ScaleOutcome {
+export interface ScaleOutcome extends OutcomeLabels {
   kind: "scale";
   id: string;
   label: string; // 화면 표시용 한글
@@ -35,7 +47,7 @@ export interface ScaleOutcome {
 }
 
 /** 있었나/없었나로 보는 결과. (수치가 없거나, 발생 자체가 결과인 것) */
-export interface PresenceOutcome {
+export interface PresenceOutcome extends OutcomeLabels {
   kind: "presence";
   id: string;
   label: string;
@@ -64,6 +76,8 @@ export const OUTCOMES: OutcomeDef[] = [
     kind: "scale",
     id: "sleep_quality",
     label: "수면의 질",
+    goodLabel: "잘 잔 날",
+    badLabel: "못 잔 날",
     category: "sleep",
     valuePath: "quality",
     scale: { min: 1, max: 5 },
@@ -78,6 +92,8 @@ export const OUTCOMES: OutcomeDef[] = [
     kind: "scale",
     id: "bowel",
     label: "배변 상태",
+    goodLabel: "괜찮았던 날",
+    badLabel: "안 좋았던 날",
     category: "bowel",
     valuePath: "bristol",
     scale: { min: 1, max: 7 },
@@ -95,6 +111,8 @@ export const OUTCOMES: OutcomeDef[] = [
     kind: "scale",
     id: "mood",
     label: "기분",
+    goodLabel: "기분 좋았던 날",
+    badLabel: "기분 안 좋았던 날",
     category: "mood",
     valuePath: "valence",
     scale: { min: -2, max: 2 },
@@ -108,6 +126,8 @@ export const OUTCOMES: OutcomeDef[] = [
     kind: "scale",
     id: "menstrual_pain",
     label: "생리통",
+    goodLabel: "덜 아팠던 날",
+    badLabel: "많이 아팠던 날",
     category: "menstrual",
     valuePath: "pain",
     scale: { min: 1, max: 5 },
@@ -121,6 +141,8 @@ export const OUTCOMES: OutcomeDef[] = [
     kind: "scale",
     id: "focus",
     label: "집중",
+    goodLabel: "집중된 날",
+    badLabel: "산만했던 날",
     category: "focus",
     valuePath: "level",
     scale: { min: 1, max: 5 },
@@ -135,6 +157,10 @@ export const OUTCOMES: OutcomeDef[] = [
     kind: "presence",
     id: "craving",
     label: "음식 갈망(craving)",
+    // 갈망은 좋음/나쁨을 붙이지 않는다(관찰만). 붉게 칠하면 식욕을 잘못한 일처럼 보인다.
+    goodLabel: "갈망 없던 날",
+    badLabel: "갈망 있던 날",
+    badMuted: true, // 붉은색 대신 옅은 호박색으로 절제. (CLAUDE.md 원칙 6)
     category: "appetite",
     match: (p) => payloadKind(p) === "craving",
     // 12h: 갈망은 직전 반나절의 상태(허기·스트레스·수면 부족)와 가깝게 붙는다. 하루 전체를
@@ -145,6 +171,8 @@ export const OUTCOMES: OutcomeDef[] = [
     kind: "presence",
     id: "digestion",
     label: "소화 불편",
+    goodLabel: "괜찮았던 날",
+    badLabel: "불편했던 날",
     category: "digestion",
     // digestion 이벤트는 그 자체가 소화 불편의 관찰이다(gas/bloating/pain 등). 존재 여부로 본다.
     match: () => true,
