@@ -20,6 +20,7 @@ export interface EntryOutcome {
   events?: number;
   hypotheses?: number;
   unparsed?: number;
+  reflections?: number;
   error?: string;
 }
 
@@ -47,6 +48,11 @@ export async function reparseEntry(
       .delete()
       .eq("raw_entry_id", entry.id);
     if (delUnparsed.error) throw new Error(delUnparsed.error.message);
+
+    // reflections 는 파생 데이터: 지웠다 다시 만든다. reflection_replies 는 건드리지 않는다
+    // (파생 아님 — 사용자가 읽은 응답이 재파싱으로 사라지면 안 된다). (0012)
+    const delReflections = await supabase.from("reflections").delete().eq("raw_entry_id", entry.id);
+    if (delReflections.error) throw new Error(delReflections.error.message);
 
     if (result.events.length > 0) {
       const rows = result.events.map((e) => ({
@@ -76,6 +82,16 @@ export async function reparseEntry(
       if (ins.error) throw new Error(ins.error.message);
     }
 
+    if (result.reflections.length > 0) {
+      const rows = result.reflections.map((text) => ({
+        raw_entry_id: entry.id,
+        user_id: userId,
+        text,
+      }));
+      const ins = await supabase.from("reflections").insert(rows);
+      if (ins.error) throw new Error(ins.error.message);
+    }
+
     const upd = await supabase
       .from("raw_entries")
       .update({ parse_version: result.parse_version, parsed_at: kstNowIso(), parse_error: null })
@@ -88,6 +104,7 @@ export async function reparseEntry(
       events: result.events.length,
       hypotheses: result.hypotheses.length,
       unparsed: result.unparsed.length,
+      reflections: result.reflections.length,
     };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

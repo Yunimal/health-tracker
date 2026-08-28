@@ -358,6 +358,29 @@ export interface UnparsedFragment {
   created_at: string;
 }
 
+// ── reflections ────────────────────────────────────────────────────────────
+/** 생각·고민·자기관찰 문장. 사건이 아니라 생각이라 events 가 아니다. 파생 데이터(재파싱 시 재생성). (0012) */
+export interface Reflection {
+  id: string;
+  raw_entry_id: string;
+  user_id: string;
+  text: string;
+  created_at: string;
+}
+
+/**
+ * 성찰에 대한 응답("같이 생각해보기"). **파생 데이터가 아니다** — 재파싱해도 지우지 않는다.
+ * reflections 는 재생성되므로 (raw_entry_id, reflection_text)로 느슨히 연결한다. (0012)
+ */
+export interface ReflectionReply {
+  id: string;
+  raw_entry_id: string;
+  user_id: string;
+  reflection_text: string;
+  reply: string;
+  created_at: string;
+}
+
 /**
  * 가족 구성원(다중 사용자). ingest_token 으로 사용자를 식별한다. (0006_multi_user)
  * ⚠️ 진짜 보안 경계가 아니다 — 토큰을 아는 사람은 그 사용자의 기록을 볼 수 있다. (CLAUDE.md)

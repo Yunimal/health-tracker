@@ -3,10 +3,13 @@ import { formatDayTime, sourceLabel } from "@/lib/format";
 import EventItem from "./EventItem";
 import ReparseButton from "./ReparseButton";
 import HideRestoreButton from "./HideRestoreButton";
+import ReflectionReply from "./ReflectionReply";
 
-/** 원문 1건 + 거기서 나온 events / hypotheses / unparsed. 원문을 크게, 파싱 결과는 그 아래 작게. */
+/** 원문 1건 + 거기서 나온 events / hypotheses / unparsed / reflections. 원문을 크게, 파싱 결과는 그 아래 작게. */
 export default function EntryCard({ data }: { data: TimelineData }) {
-  const { entry, events, hypotheses, unparsed } = data;
+  const { entry, events, hypotheses, unparsed, reflections, replies } = data;
+  /** 재파싱 후에도 응답이 유지되도록 (raw_entry_id, reflection_text)로 매칭한다. (0012) */
+  const replyFor = (text: string) => replies.find((r) => r.reflection_text === text)?.reply ?? null;
   const hidden = entry.hidden_at != null;
   // 파싱 실패 시 reparseEntry 가 parsed_at 과 parse_error 를 함께 채운다. 따라서
   // 정리 중 = 둘 다 비어 있음, 정리 실패 = parse_error 있음, 완료 = 그 외.
@@ -84,9 +87,27 @@ export default function EntryCard({ data }: { data: TimelineData }) {
               </ul>
             )}
 
-            {events.length === 0 && hypotheses.length === 0 && unparsed.length === 0 && (
-              <p className="text-xs text-gray-400">파싱된 항목 없음</p>
+            {/* 생각 — 사건과 구분되게 별도 영역. "같이 생각해보기"는 눌러야만 응답 생성. */}
+            {reflections.length > 0 && (
+              <div className="flex flex-col gap-1">
+                <span className="text-[11px] text-gray-400">생각</span>
+                <ul className="flex flex-col gap-1">
+                  {reflections.map((r) => (
+                    <ReflectionReply
+                      key={r.id}
+                      rawEntryId={entry.id}
+                      text={r.text}
+                      existingReply={replyFor(r.text)}
+                    />
+                  ))}
+                </ul>
+              </div>
             )}
+
+            {events.length === 0 &&
+              hypotheses.length === 0 &&
+              unparsed.length === 0 &&
+              reflections.length === 0 && <p className="text-xs text-gray-400">파싱된 항목 없음</p>}
           </>
         )}
       </div>

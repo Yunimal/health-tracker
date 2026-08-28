@@ -7,7 +7,9 @@ import { redirect } from "next/navigation";
 import { getSupabaseClient } from "@/lib/db/client";
 import { AUTH_COOKIE, currentWebUser, resolveUserByToken } from "@/lib/auth";
 import { reparseEntry } from "@/lib/parser/persist";
+import { generateReflectionReply } from "@/lib/reflect/reply";
 import type { Category, HypothesisStatus, RawEntry } from "@/lib/db/schema";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 /**
  * 타임라인 웹의 서버 액션. 브라우저는 이 함수들만 호출한다.
@@ -249,4 +251,96 @@ export async function createHypothesisFromFactor(
   revalidatePath("/hypotheses");
   revalidatePath("/");
   return { ok: true };
+}
+
+// ── 성찰 응답 ("같이 생각해보기") ─────────────────────────────────────────────
+export interface ReflectionReplyResult {
+  ok: boolean;
+  reply?: string;
+  error?: string;
+}
+
+/** KST 시각대 라벨. 성찰을 적은 시간대 분포를 사실로 제공할 때 쓴다. */
+function kstPartOfDay(iso: string): "새벽" | "아침" | "오후" | "저녁" | "밤" {
+  const h = new Date(Date.parse(iso) + 9 * 60 * 60 * 1000).getUTCHours();
+  if (h < 6) return "새벽";
+  if (h < 12) return "아침";
+  if (h < 18) return "오후";
+  if (h < 22) return "저녁";
+  return "밤";
+}
+
+/**
+ * 사용자의 성찰 기록에서 **코드가 계산한 사실**만 만든다(모델이 지어내지 않게). 지금은 성찰을
+ * 적은 시간대 분포. 표본이 적으면(3개 미만) 빈 문자열 — 억지 연결을 피한다.
+ */
+async function buildReflectionFacts(supabase: SupabaseClient, userId: string): Promise<string> {
+  const { data } = await supabase
+    .from("reflections")
+    .select("raw_entries(recorded_at)")
+    .eq("user_id", userId)
+    .limit(300);
+  const rows = (data ?? []) as {
+    raw_entries: { recorded_at: string } | { recorded_at: string }[] | null;
+  }[];
+  const times = rows
+    .map((r) => (Array.isArray(r.raw_entries) ? r.raw_entries[0] : r.raw_entries)?.recorded_at)
+    .filter((t): t is string => !!t);
+  if (times.length < 3) return "";
+
+  const counts = new Map<string, number>();
+  for (const t of times) {
+    const p = kstPartOfDay(t);
+    counts.set(p, (counts.get(p) ?? 0) + 1);
+  }
+  const dist = [...counts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .map(([p, n]) => `${p} ${n}개`)
+    .join(", ");
+  return `이 사용자가 성찰을 적은 시간대(지금까지 ${times.length}개): ${dist}`;
+}
+
+/**
+ * 성찰에 대한 응답을 만들어 저장하고 돌려준다. **버튼을 눌러 요청했을 때만** 호출된다.
+ * 이미 응답이 있으면 그걸 돌려준다(중복 LLM 호출·과금 방지). reflection_replies 는 파생 데이터가
+ * 아니라 재파싱해도 지워지지 않는다. (0012)
+ */
+export async function replyToReflection(
+  rawEntryId: string,
+  reflectionText: string,
+): Promise<ReflectionReplyResult> {
+  const supabase = getSupabaseClient();
+  const user = await currentWebUser();
+  if (!user) return { ok: false, error: "로그인이 필요합니다" };
+  const text = reflectionText.trim();
+  if (!text) return { ok: false, error: "빈 성찰" };
+
+  const { data: existing } = await supabase
+    .from("reflection_replies")
+    .select("reply")
+    .eq("user_id", user.id)
+    .eq("raw_entry_id", rawEntryId)
+    .eq("reflection_text", text)
+    .maybeSingle();
+  if (existing) return { ok: true, reply: (existing as { reply: string }).reply };
+
+  const facts = await buildReflectionFacts(supabase, user.id);
+
+  let reply: string;
+  try {
+    reply = await generateReflectionReply(text, facts);
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : String(err) };
+  }
+  if (!reply) return { ok: false, error: "응답을 만들지 못했어요" };
+
+  const { error } = await supabase.from("reflection_replies").insert({
+    user_id: user.id,
+    raw_entry_id: rawEntryId,
+    reflection_text: text,
+    reply,
+  });
+  if (error) return { ok: false, error: error.message };
+  revalidatePath("/");
+  return { ok: true, reply };
 }

@@ -13,6 +13,7 @@ import { PROMPT_V8 } from "./prompts/v8";
 import { PROMPT_V9 } from "./prompts/v9";
 import { PROMPT_V10 } from "./prompts/v10";
 import { PROMPT_V11 } from "./prompts/v11";
+import { PROMPT_V12 } from "./prompts/v12";
 import type { Category, OccurredAtPrecision } from "@/lib/db/schema";
 
 /**
@@ -25,7 +26,7 @@ import type { Category, OccurredAtPrecision } from "@/lib/db/schema";
 /** 파싱 모델은 env(PARSE_MODEL)로 오버라이드. 기본값은 env.parseModel() 참고. */
 
 /** 프롬프트 파일명과 동기화한다. 프롬프트를 고치면 prompts/vN.ts 를 새로 만들고 이 값을 올린다. */
-export const PARSE_VERSION = "v11";
+export const PARSE_VERSION = "v12";
 
 // 출력 한도. 사고(thinking)는 꺼도(아래 callModel) 이벤트가 많은 원문은 출력이 길어진다 —
 // 카테고리 10개 + payload 필드 확장으로 이벤트당 출력이 늘어, 13건짜리 원문에서 11,779자가
@@ -243,6 +244,8 @@ export interface ParseResult {
   events: ParsedEvent[];
   hypotheses: ParsedHypothesis[];
   unparsed: string[];
+  // 생각·고민·자기관찰 문장(원문 그대로). 사건이 아니라 생각. (기능 A, v12)
+  reflections: string[];
   parse_version: string;
 }
 
@@ -266,6 +269,7 @@ const PROMPTS: Record<string, string> = {
   v9: PROMPT_V9,
   v10: PROMPT_V10,
   v11: PROMPT_V11,
+  v12: PROMPT_V12,
 };
 
 function loadSystemPrompt(version: string): string {
@@ -464,7 +468,14 @@ function validateAndScore(raw: unknown): ParseResult {
     else console.warn(`[parser] unparsed[${i}] 문자열이 아님, 제외`);
   });
 
-  return { events, hypotheses, unparsed, parse_version: PARSE_VERSION };
+  const reflections: string[] = [];
+  const rawReflections = Array.isArray(root.reflections) ? root.reflections : [];
+  rawReflections.forEach((r, i) => {
+    if (typeof r === "string") reflections.push(r);
+    else console.warn(`[parser] reflections[${i}] 문자열이 아님, 제외`);
+  });
+
+  return { events, hypotheses, unparsed, reflections, parse_version: PARSE_VERSION };
 }
 
 /** 파싱 옵션. cachePrompt 는 5분 TTL 안에 같은 프롬프트로 2회 이상 호출될 때만 켠다. */

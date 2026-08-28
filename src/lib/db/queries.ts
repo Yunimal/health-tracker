@@ -2,7 +2,14 @@ import "server-only";
 import { getSupabaseClient } from "@/lib/db/client";
 import { excludeHidden } from "@/lib/db/filters";
 import { eventName } from "@/lib/format";
-import type { Category, Hypothesis, RawEntry, UnparsedFragment } from "@/lib/db/schema";
+import type {
+  Category,
+  Hypothesis,
+  RawEntry,
+  Reflection,
+  ReflectionReply,
+  UnparsedFragment,
+} from "@/lib/db/schema";
 
 /** 타임라인 표시용 이벤트(행 그대로, payload 는 jsonb 이므로 느슨하게). */
 export interface TimelineEvent {
@@ -21,6 +28,8 @@ export interface TimelineData {
   events: TimelineEvent[];
   hypotheses: Hypothesis[];
   unparsed: UnparsedFragment[];
+  reflections: Reflection[]; // 생각·고민 (파생)
+  replies: ReflectionReply[]; // "같이 생각해보기" 응답 (파생 아님, 재파싱해도 유지)
 }
 
 /** 오늘 날짜(KST) 를 YYYY-MM-DD 로. */
@@ -88,19 +97,23 @@ export async function getDayTimeline(
 
   const ids = rawEntries.map((e) => e.id);
   const tRest0 = performance.now();
-  const [eventsRes, hypRes, unparsedRes] = await Promise.all([
+  const [eventsRes, hypRes, unparsedRes, reflRes, replyRes] = await Promise.all([
     supabase.from("events").select("*").in("raw_entry_id", ids).order("occurred_at"),
     supabase.from("hypotheses").select("*").in("raw_entry_id", ids),
     supabase.from("unparsed_fragments").select("*").in("raw_entry_id", ids),
+    supabase.from("reflections").select("*").in("raw_entry_id", ids).order("created_at"),
+    supabase.from("reflection_replies").select("*").in("raw_entry_id", ids),
   ]);
   const tRest = performance.now() - tRest0;
   if (eventsRes.error) throw new Error(eventsRes.error.message);
   if (hypRes.error) throw new Error(hypRes.error.message);
   if (unparsedRes.error) throw new Error(unparsedRes.error.message);
+  if (reflRes.error) throw new Error(reflRes.error.message);
+  if (replyRes.error) throw new Error(replyRes.error.message);
 
   console.log(
     `[perf] getDayTimeline date=${date} rows=${rawEntries.length}` +
-      ` entries=${tEntries.toFixed(0)}ms rest_3parallel=${tRest.toFixed(0)}ms` +
+      ` entries=${tEntries.toFixed(0)}ms rest_5parallel=${tRest.toFixed(0)}ms` +
       ` total=${(performance.now() - tStart).toFixed(0)}ms`,
   );
 
@@ -111,12 +124,16 @@ export async function getDayTimeline(
     (unparsedRes.data ?? []) as UnparsedFragment[],
     (u) => u.raw_entry_id,
   );
+  const reflByEntry = groupBy((reflRes.data ?? []) as Reflection[], (r) => r.raw_entry_id);
+  const replyByEntry = groupBy((replyRes.data ?? []) as ReflectionReply[], (r) => r.raw_entry_id);
 
   return rawEntries.map((entry) => ({
     entry,
     events: eventsByEntry.get(entry.id) ?? [],
     hypotheses: hypByEntry.get(entry.id) ?? [],
     unparsed: unparsedByEntry.get(entry.id) ?? [],
+    reflections: reflByEntry.get(entry.id) ?? [],
+    replies: replyByEntry.get(entry.id) ?? [],
   }));
 }
 
