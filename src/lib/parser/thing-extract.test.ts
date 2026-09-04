@@ -61,9 +61,10 @@ describe("matchThing — 병합 규칙", () => {
     expect(result.type).toBe("new");
   });
 
-  it("편집거리 3 이상 → new", () => {
-    const existing = [makeThing("abc", "treatment", "도수치료")];
-    const result = matchThing({ kind: "treatment", normalizedName: normalize("도수치료123") }, existing);
+  it("편집거리 3 이상이고 포함 관계도 없으면 → new", () => {
+    // "침술" vs "카이로프랙틱": 편집거리 >> 2, 포함 관계 없음
+    const existing = [makeThing("abc", "treatment", "침술")];
+    const result = matchThing({ kind: "treatment", normalizedName: normalize("카이로프랙틱") }, existing);
     expect(result.type).toBe("new");
   });
 
