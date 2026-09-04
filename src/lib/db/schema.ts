@@ -416,6 +416,15 @@ export interface ThingMention {
   created_at: string;
 }
 
+/** 사용자가 "다름"으로 거부한 병합 후보 쌍. (0014) */
+export interface ThingMergeRejection {
+  id: string;
+  user_id: string;
+  thing_a_id: string; // 항상 < thing_b_id (uuid 문자열 비교)
+  thing_b_id: string;
+  created_at: string;
+}
+
 /**
  * 가족 구성원(다중 사용자). ingest_token 으로 사용자를 식별한다. (0006_multi_user)
  * ⚠️ 진짜 보안 경계가 아니다 — 토큰을 아는 사람은 그 사용자의 기록을 볼 수 있다. (CLAUDE.md)

@@ -8,6 +8,7 @@ import type {
   RawEntry,
   Reflection,
   ReflectionReply,
+  Thing,
   UnparsedFragment,
 } from "@/lib/db/schema";
 
@@ -250,6 +251,50 @@ export async function getHypothesisDetail(
   ];
 
   return { hypothesis, matchedNames, occurrences, distinctDays };
+}
+
+// ── things ───────────────────────────────────────────────────────────────────
+
+/** 사용자의 things 전체를 언급 많은 순으로. */
+export async function getThings(userId: string): Promise<Thing[]> {
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
+    .from("things")
+    .select("*")
+    .eq("user_id", userId)
+    .order("mention_count", { ascending: false })
+    .order("name", { ascending: true });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as Thing[];
+}
+
+/** 사용자의 thing 수. 메인 화면 링크에 쓴다. */
+export async function getThingCount(userId: string): Promise<number> {
+  const supabase = getSupabaseClient();
+  const { count, error } = await supabase
+    .from("things")
+    .select("*", { count: "exact", head: true })
+    .eq("user_id", userId);
+  if (error) throw new Error(error.message);
+  return count ?? 0;
+}
+
+/**
+ * 사용자가 거부한 병합 쌍 집합. 키 형식: "minId:maxId".
+ * findMergeCandidates 가 이 집합으로 이미 거부된 쌍을 필터링한다.
+ */
+export async function getThingRejectionPairs(userId: string): Promise<Set<string>> {
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase
+    .from("thing_merge_rejections")
+    .select("thing_a_id, thing_b_id")
+    .eq("user_id", userId);
+  if (error) throw new Error(error.message);
+  const set = new Set<string>();
+  for (const row of (data ?? []) as { thing_a_id: string; thing_b_id: string }[]) {
+    set.add(`${row.thing_a_id}:${row.thing_b_id}`);
+  }
+  return set;
 }
 
 // ── 대시보드 ─────────────────────────────────────────────────────────────────

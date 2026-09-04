@@ -2,6 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { env } from "@/lib/env";
 import { parseJsonLenient } from "@/lib/parser";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Thing } from "@/lib/db/schema";
 
 /**
  * 지속 대상(thing) 추출·병합·저장. (기능 [2])
@@ -158,6 +159,50 @@ export function matchThing(
  */
 export function shouldDeleteOrphanedThing(note: string | null | undefined): boolean {
   return !note || note.trim() === "";
+}
+
+// ── 병합 후보 탐색 ───────────────────────────────────────────────────────────
+
+export type CandidatePair = { a: Thing; b: Thing };
+
+/**
+ * 전체 thing 목록에서 "합칠 만한 쌍"을 찾는다. (same kind + 편집거리 ≤ 2)
+ *
+ * 제외 조건:
+ *  - 이미 정규화 이름 완전 일치(aliases 포함) → 실제로는 같은 대상이라 이미 병합됐어야 함
+ *  - rejectedPairs 에 있는 쌍 → 사용자가 "다름"으로 거부한 것
+ *
+ * rejectedPairs 키 형식: "minId:maxId" (uuid 문자열 비교 기준 정렬)
+ */
+export function findMergeCandidates(
+  things: Thing[],
+  rejectedPairs: Set<string> = new Set(),
+): CandidatePair[] {
+  const pairs: CandidatePair[] = [];
+  for (let i = 0; i < things.length; i++) {
+    for (let j = i + 1; j < things.length; j++) {
+      const a = things[i]!;
+      const b = things[j]!;
+      if (a.kind !== b.kind) continue;
+
+      const normA = normalize(a.name);
+      const normB = normalize(b.name);
+      // 이미 하나가 상대방의 alias 인 경우 — 별도 처리 불필요
+      const allNormsA = [normA, ...a.aliases.map(normalize)];
+      if (allNormsA.includes(normB)) continue;
+      const allNormsB = [normB, ...b.aliases.map(normalize)];
+      if (allNormsB.includes(normA)) continue;
+
+      if (levenshtein(normA, normB) > 2) continue;
+
+      // 거부된 쌍 제외 (canonical order)
+      const [minId, maxId] = [a.id, b.id].sort();
+      if (rejectedPairs.has(`${minId}:${maxId}`)) continue;
+
+      pairs.push({ a, b });
+    }
+  }
+  return pairs;
 }
 
 // ── DB 저장 ──────────────────────────────────────────────────────────────────

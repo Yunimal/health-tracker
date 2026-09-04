@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getDayTimeline, getOpenHypothesisCount, todayKstDate } from "@/lib/db/queries";
+import { getDayTimeline, getOpenHypothesisCount, getThingCount, todayKstDate } from "@/lib/db/queries";
 import { currentWebUser } from "@/lib/auth";
 import TextEntryForm from "./_components/TextEntryForm";
 import DateNav from "./_components/DateNav";
@@ -30,9 +30,10 @@ export default async function Page({
   const showHidden = sp.showHidden === "1";
   const tTimeline0 = performance.now();
   // 타임라인과 "가설 N개" 카운트를 병렬로 가져온다(순차 왕복 방지).
-  const [timeline, openHypothesisCount] = await Promise.all([
+  const [timeline, openHypothesisCount, thingCount] = await Promise.all([
     getDayTimeline(user.id, date, showHidden),
     getOpenHypothesisCount(user.id),
+    getThingCount(user.id),
   ]);
   const tTimeline = performance.now() - tTimeline0;
 
@@ -67,6 +68,14 @@ export default async function Page({
           >
             대시보드 ›
           </Link>
+          {thingCount > 0 && (
+            <Link
+              href="/things"
+              className="rounded-full border border-gray-300 px-3 py-0.5 text-xs text-gray-600 hover:bg-gray-50"
+            >
+              대상 {thingCount}개 ›
+            </Link>
+          )}
         </div>
         <TextEntryForm />
         <div className="flex items-center justify-between">
