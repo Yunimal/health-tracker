@@ -41,7 +41,7 @@ export default function MergeConfirmDialog({
           <span className="font-semibold">{target.winnerName}</span>
           <span className="text-gray-600"> 에 합칩니다.</span>
           <p className="mt-2 text-[11px] text-gray-400">
-            "{target.loserName}" 은 "{target.winnerName}" 의 별칭으로 보존됩니다.
+            {'"'}{target.loserName}{'"'} 은 {'"'}{target.winnerName}{'"'} 의 별칭으로 보존됩니다.
           </p>
         </div>
 

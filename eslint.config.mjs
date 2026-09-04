@@ -12,7 +12,8 @@ const compat = new FlatCompat({
 const eslintConfig = [
   ...compat.extends("next/core-web-vitals", "next/typescript", "prettier"),
   {
-    ignores: [".next/**", "node_modules/**"],
+    // next-env.d.ts 는 Next.js 가 자동 생성하는 파일. 수동 편집 불가, lint 대상 제외.
+    ignores: [".next/**", "node_modules/**", "next-env.d.ts"],
   },
 ];
 
