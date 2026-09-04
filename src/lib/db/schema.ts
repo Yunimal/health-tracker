@@ -426,6 +426,19 @@ export interface ThingMergeRejection {
 }
 
 /**
+ * 삭제된 대상의 재추출을 막는 차단 목록. (0015)
+ * ⚠️ 파생 데이터가 아니다 — 재파싱과 무관하게 영구 적용된다.
+ * 병합·삭제·이름수정은 사용자가 직접 한 행위이므로 재파싱으로 되돌아가지 않는다.
+ */
+export interface ThingBlocklist {
+  id: string;
+  user_id: string;
+  kind: ThingKind;
+  normalized_name: string; // normalize() 와 동일한 규칙
+  created_at: string;
+}
+
+/**
  * 가족 구성원(다중 사용자). ingest_token 으로 사용자를 식별한다. (0006_multi_user)
  * ⚠️ 진짜 보안 경계가 아니다 — 토큰을 아는 사람은 그 사용자의 기록을 볼 수 있다. (CLAUDE.md)
  */

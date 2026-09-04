@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getSupabaseClient } from "@/lib/db/client";
 import { currentWebUser } from "@/lib/auth";
+import { normalize } from "@/lib/parser/thing-extract";
 import type { ActionResult } from "@/app/actions";
 
 /**
@@ -86,6 +87,92 @@ export async function mergeThings(winnerId: string, loserId: string): Promise<Ac
       })
       .eq("id", winnerId);
   }
+
+  revalidatePath("/things");
+  return { ok: true };
+}
+
+/**
+ * thing 을 삭제한다. 삭제된 대상은 thing_blocklist 에 등록되어 재파싱해도 다시 올라오지 않는다.
+ *
+ * ⚠️ 파생 데이터가 아님 — 사용자가 직접 삭제한 행위이므로 재파싱으로 되돌아가지 않는다.
+ * 삭제 시 이름 + 모든 aliases 의 정규화 값을 blocklist 에 함께 등록한다.
+ * thing 삭제 → cascade 로 thing_mentions 도 삭제됨(mention_count 캐시 자동 무효화).
+ */
+export async function deleteThing(id: string): Promise<ActionResult> {
+  const supabase = getSupabaseClient();
+  const user = await currentWebUser();
+  if (!user) return { ok: false, error: "로그인이 필요합니다" };
+
+  const { data: row, error: loadErr } = await supabase
+    .from("things")
+    .select("id, kind, name, aliases")
+    .eq("id", id)
+    .eq("user_id", user.id)
+    .maybeSingle();
+  if (loadErr) return { ok: false, error: loadErr.message };
+  if (!row) return { ok: false, error: "대상을 찾지 못했습니다" };
+  const t = row as { id: string; kind: string; name: string; aliases: string[] };
+
+  // 이름 + 모든 aliases 의 정규화 값을 blocklist 에 등록.
+  const normSet = new Set([t.name, ...t.aliases].map(normalize));
+  const blockRows = [...normSet].map((normalizedName) => ({
+    user_id: user.id,
+    kind: t.kind,
+    normalized_name: normalizedName,
+  }));
+  const { error: blockErr } = await supabase
+    .from("thing_blocklist")
+    .upsert(blockRows, { onConflict: "user_id,kind,normalized_name", ignoreDuplicates: true });
+  if (blockErr) return { ok: false, error: blockErr.message };
+
+  // thing 삭제 (cascade 로 thing_mentions 도 삭제됨).
+  const { error: delErr } = await supabase.from("things").delete().eq("id", id).eq("user_id", user.id);
+  if (delErr) return { ok: false, error: delErr.message };
+
+  revalidatePath("/things");
+  return { ok: true };
+}
+
+/**
+ * thing 의 이름을 수정한다. 이전 이름은 aliases 에 자동 추가된다.
+ *
+ * ⚠️ 파생 데이터가 아님 — 사용자가 직접 수정한 행위이므로 재파싱으로 되돌아가지 않는다.
+ * aliases 에 추가된 이전 이름 덕에 미래 파싱에서 같은 이름이 나오면 이 thing 으로 자동 병합된다.
+ */
+export async function renameThing(id: string, newName: string): Promise<ActionResult> {
+  const supabase = getSupabaseClient();
+  const user = await currentWebUser();
+  if (!user) return { ok: false, error: "로그인이 필요합니다" };
+
+  const trimmed = newName.trim();
+  if (!trimmed) return { ok: false, error: "이름을 입력하세요" };
+
+  const { data: row, error: loadErr } = await supabase
+    .from("things")
+    .select("id, name, aliases")
+    .eq("id", id)
+    .eq("user_id", user.id)
+    .maybeSingle();
+  if (loadErr) return { ok: false, error: loadErr.message };
+  if (!row) return { ok: false, error: "대상을 찾지 못했습니다" };
+  const t = row as { id: string; name: string; aliases: string[] };
+
+  if (t.name === trimmed) return { ok: true };
+
+  // 이전 이름을 aliases 에 추가(중복 제거). (이름수정은 파생 데이터가 아님 — 재파싱으로 되돌아가지 않는다)
+  const aliasSet = new Set(t.aliases);
+  if (!aliasSet.has(t.name)) aliasSet.add(t.name);
+  // 새 이름과 같은 alias 가 있으면 제거(불필요한 중복).
+  aliasSet.delete(trimmed);
+  const newAliases = [...aliasSet];
+
+  const { error: updErr } = await supabase
+    .from("things")
+    .update({ name: trimmed, aliases: newAliases })
+    .eq("id", id)
+    .eq("user_id", user.id);
+  if (updErr) return { ok: false, error: updErr.message };
 
   revalidatePath("/things");
   return { ok: true };

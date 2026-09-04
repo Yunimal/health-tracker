@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { mergeThings, rejectThingMerge } from "../_actions";
+import { mergeThings, rejectThingMerge, deleteThing, renameThing } from "../_actions";
 import MergeConfirmDialog, { type MergeTarget } from "./MergeConfirmDialog";
+import DeleteConfirmDialog, { type DeleteTarget } from "./DeleteConfirmDialog";
 import type { Thing } from "@/lib/db/schema";
 import type { CandidatePair } from "@/lib/parser/thing-extract";
 
@@ -37,6 +38,59 @@ function determineMerge(a: Thing, b: Thing): MergeTarget {
   };
 }
 
+/** 인라인 이름 수정 입력창. 마운트 시 자동 포커스. */
+function RenameInput({
+  initialName,
+  pending,
+  onSubmit,
+  onCancel,
+}: {
+  initialName: string;
+  pending: boolean;
+  onSubmit: (name: string) => void;
+  onCancel: () => void;
+}) {
+  const [value, setValue] = useState(initialName);
+  const ref = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    ref.current?.focus();
+    ref.current?.select();
+  }, []);
+
+  function handleKey(e: React.KeyboardEvent) {
+    if (e.key === "Enter") { e.preventDefault(); onSubmit(value); }
+    if (e.key === "Escape") onCancel();
+  }
+
+  return (
+    <div className="flex min-w-0 flex-1 items-center gap-1.5">
+      <input
+        ref={ref}
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onKeyDown={handleKey}
+        disabled={pending}
+        className="min-w-0 flex-1 rounded border border-gray-400 px-1.5 py-0.5 text-sm font-medium focus:outline-none focus:ring-1 focus:ring-gray-500 disabled:opacity-50"
+      />
+      <button
+        onClick={() => onSubmit(value)}
+        disabled={pending || !value.trim()}
+        className="shrink-0 rounded border border-gray-300 bg-white px-2 py-0.5 text-xs hover:bg-gray-50 disabled:opacity-50"
+      >
+        확인
+      </button>
+      <button
+        onClick={onCancel}
+        disabled={pending}
+        className="shrink-0 text-xs text-gray-400 hover:text-gray-600 disabled:opacity-50"
+      >
+        취소
+      </button>
+    </div>
+  );
+}
+
 export default function ThingsClient({
   things,
   candidates,
@@ -47,8 +101,18 @@ export default function ThingsClient({
   const router = useRouter();
   const [pending, start] = useTransition();
   const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  // 병합 다이얼로그
   const [dialog, setDialog] = useState<MergeTarget | null>(null);
   const [dialogError, setDialogError] = useState<string | null>(null);
+
+  // 삭제 다이얼로그
+  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  // 인라인 이름 수정
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [renameError, setRenameError] = useState<string | null>(null);
 
   function toggleSelect(id: string) {
     setSelected((prev) => {
@@ -100,6 +164,49 @@ export default function ThingsClient({
     start(async () => {
       await rejectThingMerge(aId, bId);
       router.refresh();
+    });
+  }
+
+  function openDeleteFor(t: Thing) {
+    setDeleteError(null);
+    setDeleteTarget({ id: t.id, name: t.name, kind: t.kind, mentionCount: t.mention_count });
+  }
+
+  function confirmDelete() {
+    if (!deleteTarget) return;
+    setDeleteError(null);
+    start(async () => {
+      const res = await deleteThing(deleteTarget.id);
+      if (res.ok) {
+        setDeleteTarget(null);
+        setSelected((prev) => { const n = new Set(prev); n.delete(deleteTarget.id); return n; });
+        router.refresh();
+      } else {
+        setDeleteError(res.error ?? "실패");
+      }
+    });
+  }
+
+  function startEdit(t: Thing) {
+    setRenameError(null);
+    setEditingId(t.id);
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setRenameError(null);
+  }
+
+  function submitRename(id: string, newName: string) {
+    setRenameError(null);
+    start(async () => {
+      const res = await renameThing(id, newName);
+      if (res.ok) {
+        setEditingId(null);
+        router.refresh();
+      } else {
+        setRenameError(res.error ?? "실패");
+      }
     });
   }
 
@@ -171,10 +278,11 @@ export default function ThingsClient({
           <ul className="flex flex-col gap-1.5">
             {things.map((t) => {
               const isSelected = selected.has(t.id);
+              const isEditing = editingId === t.id;
               return (
                 <li
                   key={t.id}
-                  className={`flex items-center gap-3 rounded-lg border px-3 py-2 transition-colors ${
+                  className={`flex items-start gap-3 rounded-lg border px-3 py-2 transition-colors ${
                     isSelected ? "border-gray-400 bg-gray-50" : "border-gray-200"
                   }`}
                 >
@@ -182,18 +290,46 @@ export default function ThingsClient({
                     type="checkbox"
                     checked={isSelected}
                     onChange={() => toggleSelect(t.id)}
-                    className="h-4 w-4 cursor-pointer rounded border-gray-300 accent-gray-800"
+                    className="mt-0.5 h-4 w-4 cursor-pointer rounded border-gray-300 accent-gray-800"
                     aria-label={t.name}
                   />
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-baseline gap-1.5">
-                      <span className="font-medium">{t.name}</span>
-                      <span
-                        className={`inline-block rounded border px-1.5 py-0 text-[10px] ${KIND_COLOR[t.kind] ?? ""}`}
-                      >
-                        {KIND_LABEL[t.kind] ?? t.kind}
-                      </span>
+                      {isEditing ? (
+                        <RenameInput
+                          initialName={t.name}
+                          pending={pending}
+                          onSubmit={(name) => submitRename(t.id, name)}
+                          onCancel={cancelEdit}
+                        />
+                      ) : (
+                        <>
+                          <span className="font-medium">{t.name}</span>
+                          <button
+                            onClick={() => startEdit(t)}
+                            disabled={pending}
+                            title="이름 수정"
+                            className="text-gray-300 hover:text-gray-500 disabled:opacity-40"
+                            aria-label="이름 수정"
+                          >
+                            {/* pencil icon */}
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="h-3 w-3">
+                              <path d="M13.488 2.513a1.75 1.75 0 0 0-2.475 0L3.25 10.276a2.75 2.75 0 0 0-.714 1.284l-.5 2a.75.75 0 0 0 .905.905l2-.5a2.75 2.75 0 0 0 1.284-.714l7.763-7.763a1.75 1.75 0 0 0 0-2.475Z" />
+                            </svg>
+                          </button>
+                        </>
+                      )}
+                      {!isEditing && (
+                        <span
+                          className={`inline-block rounded border px-1.5 py-0 text-[10px] ${KIND_COLOR[t.kind] ?? ""}`}
+                        >
+                          {KIND_LABEL[t.kind] ?? t.kind}
+                        </span>
+                      )}
                     </div>
+                    {editingId === t.id && renameError && (
+                      <p className="mt-0.5 text-[11px] text-red-600">{renameError}</p>
+                    )}
                     {t.aliases.length > 0 && (
                       <p className="mt-0.5 text-[11px] text-gray-400">
                         = {t.aliases.join(", ")}
@@ -203,7 +339,21 @@ export default function ThingsClient({
                       <p className="mt-0.5 text-[11px] text-gray-500">{t.note}</p>
                     )}
                   </div>
-                  <span className="shrink-0 text-[11px] text-gray-400">{t.mention_count}건</span>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <span className="text-[11px] text-gray-400">{t.mention_count}건</span>
+                    <button
+                      onClick={() => openDeleteFor(t)}
+                      disabled={pending}
+                      title="삭제"
+                      className="text-gray-300 hover:text-red-500 disabled:opacity-40"
+                      aria-label="삭제"
+                    >
+                      {/* trash icon */}
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="h-3.5 w-3.5">
+                        <path fillRule="evenodd" d="M5 3.25V4H2.75a.75.75 0 0 0 0 1.5h.3l.815 8.15A1.5 1.5 0 0 0 5.357 15h5.285a1.5 1.5 0 0 0 1.493-1.35l.815-8.15h.3a.75.75 0 0 0 0-1.5H11v-.75A2.25 2.25 0 0 0 8.75 1h-1.5A2.25 2.25 0 0 0 5 3.25Zm2.25-.75a.75.75 0 0 0-.75.75V4h3v-.75a.75.75 0 0 0-.75-.75h-1.5ZM6.05 6a.75.75 0 0 1 .787.713l.275 5.5a.75.75 0 0 1-1.498.075l-.275-5.5A.75.75 0 0 1 6.05 6Zm3.9 0a.75.75 0 0 1 .712.787l-.275 5.5a.75.75 0 0 1-1.498-.075l.275-5.5a.75.75 0 0 1 .786-.712Z" clipRule="evenodd" />
+                      </svg>
+                    </button>
+                  </div>
                 </li>
               );
             })}
@@ -226,6 +376,17 @@ export default function ThingsClient({
           error={dialogError}
           onConfirm={confirmMerge}
           onCancel={() => { setDialog(null); setDialogError(null); }}
+        />
+      )}
+
+      {/* ── 삭제 확인 다이얼로그 ──────────────────────────────────────────── */}
+      {deleteTarget && (
+        <DeleteConfirmDialog
+          target={deleteTarget}
+          pending={pending}
+          error={deleteError}
+          onConfirm={confirmDelete}
+          onCancel={() => { setDeleteTarget(null); setDeleteError(null); }}
         />
       )}
     </>

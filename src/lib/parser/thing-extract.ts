@@ -127,8 +127,10 @@ interface ExistingThing {
  * incoming thing 이 기존 things 중 어느 것과 대응하는지 결정적 규칙으로 판정한다.
  *
  * merge  — 자동 병합. 정규화 이름 완전 일치 또는 aliases 포함.
- * candidate — 자동 병합 금지. same kind + 편집거리 ≤ 2(오타·발음 차이).
- *            잘못 합치면 복구 불가, 중복은 나중에 합칠 수 있다.
+ * candidate — 자동 병합 금지. same kind + 아래 중 하나:
+ *   (a) 편집거리 ≤ 2 (오타·발음 차이)
+ *   (b) 포함 관계 — 짧은 쪽(2자 이상)이 긴 쪽에 통째로 포함됨 ("유산균" ⊂ "공복유산균")
+ *   잘못 합치면 복구 불가, 중복은 나중에 합칠 수 있다.
  * new    — 새 thing 생성.
  */
 export function matchThing(
@@ -143,7 +145,14 @@ export function matchThing(
   }
   for (const t of existing) {
     if (t.kind !== incoming.kind) continue;
-    if (levenshtein(incoming.normalizedName, normalize(t.name)) <= 2) {
+    const existingNorm = normalize(t.name);
+    if (levenshtein(incoming.normalizedName, existingNorm) <= 2) {
+      return { type: "candidate", thingId: t.id };
+    }
+    // 포함 관계: 짧은 쪽이 2자 이상이고 긴 쪽에 통째로 포함되면 후보.
+    const shorter = incoming.normalizedName.length <= existingNorm.length ? incoming.normalizedName : existingNorm;
+    const longer  = incoming.normalizedName.length <= existingNorm.length ? existingNorm : incoming.normalizedName;
+    if (shorter.length >= 2 && longer.includes(shorter)) {
       return { type: "candidate", thingId: t.id };
     }
   }
@@ -166,7 +175,11 @@ export function shouldDeleteOrphanedThing(note: string | null | undefined): bool
 export type CandidatePair = { a: Thing; b: Thing };
 
 /**
- * 전체 thing 목록에서 "합칠 만한 쌍"을 찾는다. (same kind + 편집거리 ≤ 2)
+ * 전체 thing 목록에서 "합칠 만한 쌍"을 찾는다.
+ *
+ * 후보 조건 (same kind 이고 아래 중 하나):
+ *  (a) 편집거리 ≤ 2 (오타·발음 차이)
+ *  (b) 포함 관계 — 짧은 쪽(2자 이상)이 긴 쪽에 통째로 포함됨 ("유산균" ⊂ "공복유산균")
  *
  * 제외 조건:
  *  - 이미 정규화 이름 완전 일치(aliases 포함) → 실제로는 같은 대상이라 이미 병합됐어야 함
@@ -193,7 +206,15 @@ export function findMergeCandidates(
       const allNormsB = [normB, ...b.aliases.map(normalize)];
       if (allNormsB.includes(normA)) continue;
 
-      if (levenshtein(normA, normB) > 2) continue;
+      // (a) 편집거리 ≤ 2
+      const isSimilar = levenshtein(normA, normB) <= 2;
+
+      // (b) 포함 관계: 짧은 쪽이 2자 이상이고 긴 쪽에 통째로 포함됨
+      const shorter = normA.length <= normB.length ? normA : normB;
+      const longer  = normA.length <= normB.length ? normB : normA;
+      const isContained = shorter.length >= 2 && longer.includes(shorter);
+
+      if (!isSimilar && !isContained) continue;
 
       // 거부된 쌍 제외 (canonical order)
       const [minId, maxId] = [a.id, b.id].sort();
@@ -280,18 +301,29 @@ export async function persistThings(
   const extracted = await extractThings(transcript);
   if (extracted.length === 0) return 0;
 
-  // 3) 기존 things 로드(한 번만).
-  const { data: existingData, error: exErr } = await supabase
-    .from("things")
-    .select("id, kind, name, aliases")
-    .eq("user_id", userId);
-  if (exErr) throw new Error(exErr.message);
-  const existingThings: ExistingThing[] = (existingData ?? []) as ExistingThing[];
+  // 3) 기존 things + blocklist 로드(한 번만).
+  const [existingRes, blocklistRes] = await Promise.all([
+    supabase.from("things").select("id, kind, name, aliases").eq("user_id", userId),
+    supabase.from("thing_blocklist").select("kind, normalized_name").eq("user_id", userId),
+  ]);
+  if (existingRes.error) throw new Error(existingRes.error.message);
+  if (blocklistRes.error) throw new Error(blocklistRes.error.message);
+  const existingThings: ExistingThing[] = (existingRes.data ?? []) as ExistingThing[];
+  // blocklist 키 형식: "kind:normalizedName" — O(1) 조회
+  const blocklist = new Set(
+    (blocklistRes.data ?? []).map((r) => `${r.kind}:${r.normalized_name}`),
+  );
 
   // 4) 매칭 → mention 삽입.
   let count = 0;
   for (const ex of extracted) {
     const normName = normalize(ex.name);
+    // blocklist 에 등록된 대상은 건너뛴다.
+    // ⚠️ 파생 데이터가 아님 — 사용자가 직접 삭제한 것이므로 재파싱으로 되돌아가지 않는다.
+    if (blocklist.has(`${ex.kind}:${normName}`)) {
+      console.info(`[persistThings] blocklist 등록 항목 건너뜀: "${ex.name}" (${ex.kind})`);
+      continue;
+    }
     const match = matchThing({ kind: ex.kind, normalizedName: normName }, existingThings);
 
     let thingId: string;
