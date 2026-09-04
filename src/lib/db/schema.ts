@@ -381,6 +381,41 @@ export interface ReflectionReply {
   created_at: string;
 }
 
+// ── things (0013) ──────────────────────────────────────────────────────────
+export type ThingKind = "treatment" | "product" | "place" | "regimen";
+
+/**
+ * 여러 시점에 걸쳐 추적할 고유 대상. "쥬베룩이 어땠더라"처럼 사건이 아니라 대상.
+ * mention_count / first_seen_at / last_seen_at 는 비정규화 캐시(source of truth: thing_mentions).
+ * note 는 사용자가 직접 쓰는 메모 — 파생 데이터가 아니다(재파싱으로 지우지 않음). (0013)
+ */
+export interface Thing {
+  id: string;
+  user_id: string;
+  kind: ThingKind;
+  name: string;
+  aliases: string[];
+  first_seen_at: string | null;
+  last_seen_at: string | null;
+  mention_count: number;
+  note: string | null;
+  created_at: string;
+}
+
+/**
+ * thing 을 언급한 raw_entry 를 링크한다. (0013)
+ * events 와 같은 생명주기의 파생 데이터(재파싱 시 삭제·재생성).
+ * unique(thing_id, raw_entry_id) — 한 원문은 한 대상에 한 번만.
+ */
+export interface ThingMention {
+  id: string;
+  thing_id: string;
+  raw_entry_id: string;
+  user_id: string;
+  excerpt: string | null;
+  created_at: string;
+}
+
 /**
  * 가족 구성원(다중 사용자). ingest_token 으로 사용자를 식별한다. (0006_multi_user)
  * ⚠️ 진짜 보안 경계가 아니다 — 토큰을 아는 사람은 그 사용자의 기록을 볼 수 있다. (CLAUDE.md)

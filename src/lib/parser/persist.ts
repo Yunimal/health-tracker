@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { parseTranscript, PARSE_VERSION, type ParsedHypothesis } from "@/lib/parser";
 import { matchHypotheses } from "@/lib/parser/hypothesis-match";
+import { persistThings } from "@/lib/parser/thing-extract";
 import type { RawEntry } from "@/lib/db/schema";
 
 /**
@@ -21,6 +22,7 @@ export interface EntryOutcome {
   hypotheses?: number;
   unparsed?: number;
   reflections?: number;
+  things?: number;
   error?: string;
 }
 
@@ -98,6 +100,14 @@ export async function reparseEntry(
       .eq("id", entry.id);
     if (upd.error) throw new Error(upd.error.message);
 
+    // 대상 추출(thing-extract). 파싱과 분리된 별도 단계. 실패해도 파싱 결과는 보존된다.
+    let thingsCount: number | undefined;
+    try {
+      thingsCount = await persistThings(supabase, userId, entry.id, entry.transcript);
+    } catch (err) {
+      console.warn("[reparseEntry] thing 추출 실패 (파싱 결과 유지):", err);
+    }
+
     return {
       raw_entry_id: entry.id,
       ok: true,
@@ -105,6 +115,7 @@ export async function reparseEntry(
       hypotheses: result.hypotheses.length,
       unparsed: result.unparsed.length,
       reflections: result.reflections.length,
+      things: thingsCount,
     };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
