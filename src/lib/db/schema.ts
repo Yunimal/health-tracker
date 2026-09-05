@@ -5,7 +5,7 @@
  */
 
 // ── 공통 enum (SQL CHECK 제약과 동일) ──────────────────────────────────────
-export type Source = "voice" | "text";
+export type Source = "voice" | "text" | "device";
 export type Category =
   | "food"
   | "mood"
@@ -68,6 +68,15 @@ export interface SleepPayload {
   quality: SleepQuality | null;
   interruptions: number | null;
   note: string | null;
+  // 워치 측정값. 자기 보고는 source="self"(기본), 기기 측정은 source="device".
+  // quality(주관)와 score(객관)는 별개다 — 서로 덮어쓰지 않는다.
+  source: "self" | "device";
+  score: number | null;         // 워치 수면 점수 0~100
+  total_minutes: number | null;
+  awake_minutes: number | null;
+  deep_minutes: number | null;
+  rem_minutes: number | null;
+  core_minutes: number | null;
 }
 
 // energy — level: 1(탈진) ~ 5(활력 충만)
@@ -234,6 +243,10 @@ export interface RawEntryInsert {
   transcript: string;
   source: Source;
   recorded_at?: string;
+  // device 소스 전용: 재파싱·재추출 스크립트가 건드리지 않도록 버전을 미리 채운다.
+  parse_version?: string;
+  parsed_at?: string;
+  thing_extract_version?: string;
 }
 
 // ── events (category 로 구분되는 discriminated union) ────────────────────────

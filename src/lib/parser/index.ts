@@ -83,6 +83,15 @@ const sleepPayloadSchema = z.object({
   quality: z.number().int().min(1).max(5).nullable(),
   interruptions: z.number().int().nullable(),
   note: z.string().nullable(),
+  // 워치 측정값. LLM 은 출력하지 않으므로 default 로 채운다.
+  // /api/sleep 이 기기 데이터를 직접 INSERT 할 때 source="device" 로 덮어쓴다.
+  source: z.enum(["self", "device"]).default("self"),
+  score: z.number().int().min(0).max(100).nullable().default(null),
+  total_minutes: z.number().int().nullable().default(null),
+  awake_minutes: z.number().int().nullable().default(null),
+  deep_minutes: z.number().int().nullable().default(null),
+  rem_minutes: z.number().int().nullable().default(null),
+  core_minutes: z.number().int().nullable().default(null),
 });
 
 const energyPayloadSchema = z.object({

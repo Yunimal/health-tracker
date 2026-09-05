@@ -90,6 +90,22 @@ export const OUTCOMES: OutcomeDef[] = [
   },
   {
     kind: "scale",
+    id: "sleep_score",
+    label: "워치 수면 점수",
+    goodLabel: "점수 높은 날",
+    badLabel: "점수 낮은 날",
+    category: "sleep",
+    valuePath: "score",
+    scale: { min: 0, max: 100 },
+    direction: "high_good",
+    // 80 이상을 좋음으로 본다(Apple Watch 기준 상위 구간). 60 이하를 나쁨으로.
+    // quality 와 독립된 결과 변수 — 점수 높아도 개운하지 않은 날, 그 반대도 있다.
+    goodRange: [80, 100],
+    badRange: [0, 60],
+    lookbackHours: 18,
+  },
+  {
+    kind: "scale",
     id: "bowel",
     label: "배변 상태",
     goodLabel: "괜찮았던 날",
