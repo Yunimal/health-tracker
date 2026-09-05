@@ -3,7 +3,7 @@ import { formatWhen, summarizeEvent } from "@/lib/format";
 import type { DashboardPeriod, InsightEvent } from "@/lib/db/queries";
 import { OUTCOMES, getOutcome, kstDateOf, readScaleValue } from "@/lib/analysis/outcomes";
 import { compareOutcome, withinLookback } from "@/lib/analysis/compare";
-import { extractInputFactors } from "@/lib/analysis/inputs";
+import { extractInputFactors, type ThingNameEntry } from "@/lib/analysis/inputs";
 import FactorTable, { type FactorRow, type Occurrence } from "./FactorTable";
 
 /**
@@ -36,17 +36,19 @@ export default function InsightsTab({
   today,
   selectedId,
   period,
+  things,
 }: {
   events: InsightEvent[];
   periodDays: number;
   today: string;
   selectedId: string;
   period: DashboardPeriod;
+  things: ThingNameEntry[];
 }) {
   // 각 결과의 비교를 한 번씩 계산(버튼의 "N일" 표시 + 선택된 결과 상세에 재사용).
   const computed = OUTCOMES.map((o) => ({
     outcome: o,
-    cmp: compareOutcome(o.id, events, periodDays, { today }),
+    cmp: compareOutcome(o.id, events, periodDays, { today, things }),
   }));
 
   const selected = getOutcome(selectedId) ?? OUTCOMES[0]!;
@@ -133,7 +135,7 @@ export default function InsightsTab({
       ) : (
         // 2-b. 데이터 충분 — 원인 후보 비교표 + 인라인 상세
         <FactorTable
-          rows={buildFactorRows(selected, cmp, events)}
+          rows={buildFactorRows(selected, cmp, events, things)}
           goodTotal={cmp.goodDays.length}
           badTotal={cmp.badDays.length}
           goodLabel={selected.goodLabel}
@@ -155,6 +157,7 @@ function buildFactorRows(
   selected: (typeof OUTCOMES)[number],
   cmp: ReturnType<typeof compareOutcome>,
   events: InsightEvent[],
+  things: ThingNameEntry[],
 ): FactorRow[] {
   // 분류된 날마다: 그날의 결과 요약/값(상세의 outcomeSummary·결과값 목록) + lookback 창.
   const info = new Map<string, { summary: string; value: number | null }>();
@@ -188,7 +191,7 @@ function buildFactorRows(
     );
   }
 
-  const inputById = new Map(extractInputFactors(events).map((f) => [f.id, f]));
+  const inputById = new Map(extractInputFactors(events, { things }).map((f) => [f.id, f]));
   const top = [...cmp.factors].sort((a, b) => b.difference - a.difference).slice(0, 10);
 
   return top.map((fc) => {

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { currentWebUser } from "@/lib/auth";
-import { getDashboardData, getEventsForAnalysis, type DashboardPeriod } from "@/lib/db/queries";
+import { getDashboardData, getEventsForAnalysis, getThings, type DashboardPeriod } from "@/lib/db/queries";
 import UserBar from "../_components/UserBar";
 import InsightsTab from "./_components/InsightsTab";
 import RecordsTab from "./_components/RecordsTab";
@@ -44,7 +44,10 @@ export default async function DashboardPage({
   // 탭에 필요한 데이터만 가져온다. insights 는 lookback 버퍼 포함, records 는 기간 그대로.
   let content;
   if (tab === "insights") {
-    const { events, periodDays, today } = await getEventsForAnalysis(user.id, period);
+    const [{ events, periodDays, today }, things] = await Promise.all([
+      getEventsForAnalysis(user.id, period),
+      getThings(user.id),
+    ]);
     content = (
       <InsightsTab
         events={events}
@@ -52,6 +55,7 @@ export default async function DashboardPage({
         today={today}
         selectedId={sp.outcome ?? ""}
         period={period}
+        things={things}
       />
     );
   } else {

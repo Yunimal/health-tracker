@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { getOutcome, classifyScaleValue, type ScaleOutcome, type AnalysisEvent } from "./outcomes";
 import { compareOutcome, withinLookback } from "./compare";
-import { extractInputFactors } from "./inputs";
+import { extractInputFactors, type ThingNameEntry } from "./inputs";
 
 // ── 테스트용 이벤트 빌더 ──────────────────────────────────────────────────────
 function ev(
@@ -180,5 +180,74 @@ describe("presence 결과 (craving) — good 은 최소 기록 밀도(≥3건)�
       today: "2026-08-18",
     });
     expect(r3.goodDays).toEqual(["2026-08-18"]);
+  });
+});
+
+describe("extractInputFactors — things 정규화", () => {
+  const med = (iso: string, name: string) =>
+    ev("medication", iso, { name, kind: "taken" });
+
+  const things: ThingNameEntry[] = [
+    { id: "t-proktin", name: "프록틴", aliases: ["프록틴정", "푸로틴정"] },
+  ];
+
+  it("alias 로 기록된 이벤트들이 정규 이름(thing.name) 하나로 묶인다", () => {
+    const events = [
+      med("2026-08-10T10:00:00+09:00", "프록틴정"), // alias 1
+      med("2026-08-11T10:00:00+09:00", "푸로틴정"), // alias 2
+      med("2026-08-12T10:00:00+09:00", "프록틴"),   // canonical
+    ];
+    const factors = extractInputFactors(events, { things });
+
+    const f = factors.find((x) => x.id === "name:medication:thing:t-proktin");
+    expect(f).toBeDefined();
+    expect(f!.label).toBe("프록틴");
+
+    // 세 이름이 모두 testDay 에 잡혀야 한다.
+    expect(f!.testDay(events)).toBe(true);
+
+    // 개별 이름으로 factor 가 따로 생기면 안 된다.
+    expect(factors.find((x) => x.label === "프록틴정")).toBeUndefined();
+    expect(factors.find((x) => x.label === "푸로틴정")).toBeUndefined();
+  });
+
+  it("alias 이름만 등장해도 testDay 가 잡힌다", () => {
+    const events = [
+      med("2026-08-10T10:00:00+09:00", "프록틴정"),
+      med("2026-08-11T10:00:00+09:00", "프록틴정"),
+    ];
+    const factors = extractInputFactors(events, { things });
+    const f = factors.find((x) => x.id === "name:medication:thing:t-proktin");
+    expect(f).toBeDefined();
+    // alias 만 있는 이벤트에서도 select 가 돌아와야 한다.
+    expect(f!.select(events)).toHaveLength(2);
+  });
+
+  it("things 에 없는 이름은 원문 그대로 factor 가 된다", () => {
+    const events = [
+      med("2026-08-10T10:00:00+09:00", "아스피린"),
+      med("2026-08-11T10:00:00+09:00", "아스피린"),
+    ];
+    const factors = extractInputFactors(events, { things });
+    const f = factors.find((x) => x.id === "name:medication:아스피린");
+    expect(f).toBeDefined();
+    expect(f!.label).toBe("아스피린");
+  });
+
+  it("things 가 빈 배열이어도 기존처럼 동작한다", () => {
+    const events = [
+      med("2026-08-10T10:00:00+09:00", "아스피린"),
+      med("2026-08-11T10:00:00+09:00", "아스피린"),
+    ];
+    const factors = extractInputFactors(events, { things: [] });
+    expect(factors.find((x) => x.id === "name:medication:아스피린")).toBeDefined();
+  });
+
+  it("things 를 아예 안 넘겨도 기존처럼 동작한다 (options 생략)", () => {
+    const events = [
+      food("2026-08-06T22:00:00+09:00", "커피"),
+      food("2026-08-09T22:00:00+09:00", "커피"),
+    ];
+    expect(extractInputFactors(events).some((f) => f.id === "name:food:커피")).toBe(true);
   });
 });
