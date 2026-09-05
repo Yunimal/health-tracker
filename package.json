@@ -16,7 +16,8 @@
     "test:watch": "vitest",
     "test:golden": "node scripts/golden.mjs",
     "reparse": "node scripts/reparse-all.mjs",
-    "sync-things": "node scripts/sync-things.mjs"
+    "sync-things": "node scripts/sync-things.mjs",
+    "extract-things": "node scripts/extract-things.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.68.0",

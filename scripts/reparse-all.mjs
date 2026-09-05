@@ -20,6 +20,7 @@
  *   pnpm reparse -- --dry-run        대상 건수·사용자별 분포만 출력(호출 없음)
  *   pnpm reparse -- --user 엄마       특정 사용자(app_users.label)만
  *   pnpm reparse -- --limit 20        최대 20 건만(비용 통제)
+ *   pnpm reparse -- --delay 2000      호출 사이 지연 ms (기본 2000)
  *
  * .env.local 을 읽어 실행된다(골든 러너와 같은 방식). SUPABASE_URL /
  * SUPABASE_SERVICE_ROLE_KEY / ANTHROPIC_API_KEY 필요.
@@ -45,9 +46,28 @@ function reqEnv(name) {
   return v;
 }
 
-/** argv 파싱. 알 수 없는 옵션/누락 값은 즉시 종료한다. */
-function parseArgs(argv) {
-  const args = { dryRun: false, user: null, limit: null };
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/** 레이트 리밋 에러 메시지인지 판별한다. */
+function isRateLimitMessage(msg) {
+  return (
+    msg.includes("429") ||
+    msg.toLowerCase().includes("rate_limit") ||
+    msg.toLowerCase().includes("rate limit")
+  );
+}
+
+/** 크레딧 부족 에러 메시지인지 판별한다. 재시도해도 같은 결과이므로 전체 중단한다. */
+function isCreditMessage(msg) {
+  return msg.toLowerCase().includes("credit");
+}
+
+/** argv 파싱. "--" 는 pnpm 이 삽입하는 구분자이므로 무시한다. */
+function parseArgs(rawArgv) {
+  const argv = rawArgv.filter((a) => a !== "--");
+  const args = { dryRun: false, user: null, limit: null, delay: 2000 };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === "--dry-run") {
@@ -66,6 +86,13 @@ function parseArgs(argv) {
         process.exit(1);
       }
       args.limit = n;
+    } else if (a === "--delay") {
+      const n = Number(argv[++i]);
+      if (!Number.isInteger(n) || n < 0) {
+        console.error("--delay 는 0 이상의 정수(밀리초)여야 합니다");
+        process.exit(1);
+      }
+      args.delay = n;
     } else {
       console.error(`알 수 없는 옵션: ${a}`);
       process.exit(1);
@@ -159,6 +186,8 @@ async function main() {
     if (args.limit && targets.length > args.limit) {
       console.log(`--limit ${args.limit} → 앞에서 ${args.limit} 건만 처리`);
     }
+    console.log(`호출 간격: ${args.delay}ms (--delay 로 조정, reparse 는 entry 당 최대 3회 LLM 호출)`);
+
 
     if (args.dryRun) {
       console.log("\n[dry-run] 실제 호출 없이 종료합니다.");
@@ -173,9 +202,13 @@ async function main() {
 
     resetApiCallCount();
     let ok = 0;
-    let failCount = 0;
+    let rateLimitCount = 0;
+    let otherFailCount = 0;
     const total = toProcess.length;
     for (let i = 0; i < total; i++) {
+      // 첫 번째 호출 제외, 호출 사이에 지연을 넣어 레이트 리밋을 방지한다.
+      if (i > 0 && args.delay > 0) await sleep(args.delay);
+
       const entry = toProcess[i];
       const label = labelById.get(entry.user_id) ?? entry.user_id;
       // 배치이므로 cachePrompt: true(같은 프롬프트로 연속 호출 — 캐시 이득).
@@ -188,17 +221,31 @@ async function main() {
             `(events ${outcome.events ?? 0}, hyp ${outcome.hypotheses ?? 0}, unparsed ${outcome.unparsed ?? 0})`,
         );
       } else {
-        failCount++;
-        console.log(
-          `[${i + 1}/${total}] ${label} · ${entry.id} · 실패: ${outcome.error ?? "알 수 없는 오류"}`,
-        );
+        const errMsg = outcome.error ?? "알 수 없는 오류";
+        console.log(`[${i + 1}/${total}] ${label} · ${entry.id} · 실패: ${errMsg}`);
+        if (isCreditMessage(errMsg)) {
+          // 크레딧 부족: parse_error 는 이미 reparseEntry 가 기록했다. 전체 중단.
+          otherFailCount++;
+          const remaining = total - i - 1;
+          console.error(
+            `\n크레딧이 부족해 중단했습니다. 남은 ${remaining}건은 처리되지 않았습니다.`,
+          );
+          break;
+        } else if (isRateLimitMessage(errMsg)) {
+          rateLimitCount++;
+        } else {
+          otherFailCount++;
+        }
       }
     }
 
+    const failCount = rateLimitCount + otherFailCount;
     console.log(
       `\n요약: 처리 ${ok + failCount} 건 (성공 ${ok} · 실패 ${failCount}) · API 호출 ${getApiCallCount()} 회`,
     );
     if (failCount > 0) {
+      if (rateLimitCount > 0) console.log(`  · 레이트 리밋: ${rateLimitCount} 건`);
+      if (otherFailCount > 0) console.log(`  · 기타 오류: ${otherFailCount} 건`);
       console.log(
         `실패한 ${failCount} 건은 raw_entries.parse_error 에 기록됨(원문은 불변). ` +
           `다음 실행에서 다시 대상이 되며, 개별로는 웹의 "다시 파싱" 또는 POST /api/parse 로도 재시도한다.`,

@@ -21,6 +21,12 @@ import type { Thing } from "@/lib/db/schema";
 
 export type ThingKind = "treatment" | "product" | "place" | "regimen";
 
+/**
+ * 대상 추출 프롬프트 버전. SYSTEM 상수를 고치면 이 값을 올리고 pnpm extract-things 를 실행한다.
+ * parse_version(파싱) 과 별개다 — 추출 프롬프트만 고쳤을 때 전체 재파싱 없이 추출만 다시 할 수 있다.
+ */
+export const THING_EXTRACT_VERSION = "v2";
+
 export interface ExtractedThing {
   kind: ThingKind;
   name: string;
@@ -197,12 +203,19 @@ export function matchThing(
 /**
  * mention 이 0이 된 thing 을 삭제해도 되는지 판단한다.
  *
- * note 가 없으면 삭제한다(파생 데이터).
- * note 가 있으면 남긴다 — 사용자가 직접 쓴 메모는 파생 데이터가 아니다.
- * 재파싱이 사용자의 직접 작성 내용을 지워서는 안 된다.
+ * 사용자가 직접 손댄 흔적(note / aliases)이 있으면 파생 데이터가 아니다 — 삭제하지 않는다.
+ *  - note: 사용자가 직접 쓴 메모
+ *  - aliases: 사용자가 병합하거나 이름을 수정한 것
+ *    (renameThing 은 이전 이름을 aliases 에 추가, mergeThings 는 loser 이름을 aliases 에 추가)
+ *
+ * 두 흔적이 모두 없을 때만 삭제한다(순수 파생 데이터 정리).
  */
-export function shouldDeleteOrphanedThing(note: string | null | undefined): boolean {
-  return !note || note.trim() === "";
+export function shouldDeleteOrphanedThing(
+  thing: { note?: string | null; aliases?: string[] } | null | undefined,
+): boolean {
+  if (thing?.note && thing.note.trim() !== "") return false;
+  if (thing?.aliases && thing.aliases.length > 0) return false;
+  return true;
 }
 
 // ── 병합 후보 탐색 ───────────────────────────────────────────────────────────
@@ -276,10 +289,10 @@ export async function recountThing(supabase: SupabaseClient, thingId: string): P
   if (rows.length === 0) {
     const { data: thing } = await supabase
       .from("things")
-      .select("note")
+      .select("note, aliases")
       .eq("id", thingId)
       .single();
-    if (shouldDeleteOrphanedThing((thing as { note?: string | null } | null)?.note)) {
+    if (shouldDeleteOrphanedThing(thing as { note?: string | null; aliases?: string[] } | null)) {
       const del = await supabase.from("things").delete().eq("id", thingId);
       if (del.error) throw new Error(del.error.message);
     }
@@ -300,10 +313,8 @@ export async function recountThing(supabase: SupabaseClient, thingId: string): P
 /**
  * 지속 대상 추출·병합·저장. reparseEntry 에서 파싱 성공 후 별도로 호출된다.
  *
- * 1) 이 원문의 기존 mentions 제거 + 영향받는 thing 재계산(멱등 재파싱).
- * 2) LLM 으로 transcript 에서 things 추출.
- * 3) 기존 things 와 결정적 규칙으로 매칭 → merge/새 생성.
- * 4) mention 삽입(upsert — unique 제약으로 중복 방지) + 재계산.
+ * insert-before-delete 패턴: LLM 추출 후 새 mention 을 삽입한 뒤에 기존 mention 을 삭제한다.
+ * 추출이 실패하면 기존 상태를 그대로 보존한다(throw → 호출부가 처리).
  *
  * ⚠️ 트랜잭션 없음. 중간 실패 시 재파싱으로 복구한다. (persistHypotheses 와 같은 방침)
  */
@@ -313,86 +324,105 @@ export async function persistThings(
   entryId: string,
   transcript: string,
 ): Promise<number> {
-  // 1) 기존 mentions 제거 + 재계산.
+  // 1) 기존 mention ID + thing_id 수집. 아직 삭제하지 않는다.
+  //    insert-before-delete: LLM 추출이 실패해도 기존 상태를 그대로 보존한다.
   const { data: myMentions, error: mErr } = await supabase
     .from("thing_mentions")
     .select("id, thing_id")
     .eq("raw_entry_id", entryId);
   if (mErr) throw new Error(mErr.message);
 
-  const affected = new Set<string>();
-  const mentionIds: string[] = [];
-  for (const row of (myMentions ?? []) as { id: string; thing_id: string }[]) {
-    mentionIds.push(row.id);
-    affected.add(row.thing_id);
+  const oldMentions = (myMentions ?? []) as { id: string; thing_id: string }[];
+  const oldAffected = new Set<string>(oldMentions.map((m) => m.thing_id));
+
+  // 2) LLM 추출 — 실패하면 throw. 기존 mention 은 아직 살아있다.
+  const extracted = await extractThings(transcript);
+  let count = 0;
+  const newThingIds = new Set<string>();
+
+  if (extracted.length > 0) {
+    // 3) 기존 things + blocklist 로드(한 번만).
+    const [existingRes, blocklistRes] = await Promise.all([
+      supabase.from("things").select("id, kind, name, aliases").eq("user_id", userId),
+      supabase.from("thing_blocklist").select("kind, normalized_name").eq("user_id", userId),
+    ]);
+    if (existingRes.error) throw new Error(existingRes.error.message);
+    if (blocklistRes.error) throw new Error(blocklistRes.error.message);
+    const existingThings: ExistingThing[] = (existingRes.data ?? []) as ExistingThing[];
+    // blocklist 키 형식: "kind:normalizedName" — O(1) 조회
+    const blocklist = new Set(
+      (blocklistRes.data ?? []).map((r) => `${r.kind}:${r.normalized_name}`),
+    );
+
+    // 4) 매칭 → mention upsert (기존 mention 삭제 전에).
+    //    같은 thing 이 이번에도 매칭되면 upsert 가 기존 행을 업데이트한다(ID 보존).
+    for (const ex of extracted) {
+      const normName = normalize(ex.name);
+      // blocklist 에 등록된 대상은 건너뛴다.
+      // ⚠️ 파생 데이터가 아님 — 사용자가 직접 삭제한 것이므로 재파싱으로 되돌아가지 않는다.
+      if (blocklist.has(`${ex.kind}:${normName}`)) {
+        console.info(`[persistThings] blocklist 등록 항목 건너뜀: "${ex.name}" (${ex.kind})`);
+        continue;
+      }
+      const match = matchThing({ kind: ex.kind, normalizedName: normName }, existingThings);
+
+      let thingId: string;
+      if (match.type === "merge") {
+        thingId = match.thingId;
+        // 다르게 표현된 이름을 aliases 에 추가한다(표현 다양성 보존).
+        const canonical = existingThings.find((t) => t.id === thingId)!;
+        if (ex.name !== canonical.name && !canonical.aliases.includes(ex.name)) {
+          const newAliases = [...canonical.aliases, ex.name];
+          await supabase.from("things").update({ aliases: newAliases }).eq("id", thingId);
+          canonical.aliases = newAliases;
+        }
+      } else {
+        if (match.type === "candidate") {
+          // 유사하지만 병합하지 않는다 — 잘못 합치면 복구 불가, 중복은 나중에 합칠 수 있다.
+          console.info(`[persistThings] 병합 후보(자동 병합 안 함): "${ex.name}" ↔ thing ${match.thingId}`);
+        }
+        const { data: newThing, error: insErr } = await supabase
+          .from("things")
+          .insert({ user_id: userId, kind: ex.kind, name: ex.name })
+          .select("id")
+          .single();
+        if (insErr) throw new Error(insErr.message);
+        thingId = (newThing as { id: string }).id;
+        existingThings.push({ id: thingId, kind: ex.kind, name: ex.name, aliases: [] });
+      }
+
+      const upsert = await supabase.from("thing_mentions").upsert(
+        { thing_id: thingId, raw_entry_id: entryId, user_id: userId, excerpt: ex.excerpt },
+        { onConflict: "thing_id,raw_entry_id" },
+      );
+      if (upsert.error) throw new Error(upsert.error.message);
+      newThingIds.add(thingId);
+      count++;
+    }
   }
-  if (mentionIds.length > 0) {
-    const del = await supabase.from("thing_mentions").delete().in("id", mentionIds);
+
+  // 5) 이번 추출에서 다루지 않은 기존 mention 삭제.
+  //    같은 thing 이 이번에도 매칭된 경우(upsert 업데이트), 해당 mention 은 유지한다.
+  const mentionIdsToDelete = oldMentions
+    .filter((m) => !newThingIds.has(m.thing_id))
+    .map((m) => m.id);
+  if (mentionIdsToDelete.length > 0) {
+    const del = await supabase.from("thing_mentions").delete().in("id", mentionIdsToDelete);
     if (del.error) throw new Error(del.error.message);
   }
-  for (const thingId of affected) await recountThing(supabase, thingId);
 
-  // 2) LLM 추출.
-  const extracted = await extractThings(transcript);
-  if (extracted.length === 0) return 0;
+  // 6) 재계산 — 기존 + 새 thing 전체. 삭제 후에 해야 count 가 정확하다.
+  const allAffected = new Set([...oldAffected, ...newThingIds]);
+  for (const thingId of allAffected) await recountThing(supabase, thingId);
 
-  // 3) 기존 things + blocklist 로드(한 번만).
-  const [existingRes, blocklistRes] = await Promise.all([
-    supabase.from("things").select("id, kind, name, aliases").eq("user_id", userId),
-    supabase.from("thing_blocklist").select("kind, normalized_name").eq("user_id", userId),
-  ]);
-  if (existingRes.error) throw new Error(existingRes.error.message);
-  if (blocklistRes.error) throw new Error(blocklistRes.error.message);
-  const existingThings: ExistingThing[] = (existingRes.data ?? []) as ExistingThing[];
-  // blocklist 키 형식: "kind:normalizedName" — O(1) 조회
-  const blocklist = new Set(
-    (blocklistRes.data ?? []).map((r) => `${r.kind}:${r.normalized_name}`),
-  );
+  // 7) thing_extract_version 갱신, thing_extract_error 초기화 — 추출 결과가 0건이어도 갱신한다.
+  //    다음 pnpm extract-things 실행 시 이 원문을 다시 대상으로 삼지 않도록.
+  //    이전 실패 기록이 있으면 null 로 지운다. (0016/0017 마이그레이션으로 허용된 컬럼)
+  const ver = await supabase
+    .from("raw_entries")
+    .update({ thing_extract_version: THING_EXTRACT_VERSION, thing_extract_error: null })
+    .eq("id", entryId);
+  if (ver.error) throw new Error(ver.error.message);
 
-  // 4) 매칭 → mention 삽입.
-  let count = 0;
-  for (const ex of extracted) {
-    const normName = normalize(ex.name);
-    // blocklist 에 등록된 대상은 건너뛴다.
-    // ⚠️ 파생 데이터가 아님 — 사용자가 직접 삭제한 것이므로 재파싱으로 되돌아가지 않는다.
-    if (blocklist.has(`${ex.kind}:${normName}`)) {
-      console.info(`[persistThings] blocklist 등록 항목 건너뜀: "${ex.name}" (${ex.kind})`);
-      continue;
-    }
-    const match = matchThing({ kind: ex.kind, normalizedName: normName }, existingThings);
-
-    let thingId: string;
-    if (match.type === "merge") {
-      thingId = match.thingId;
-      // 다르게 표현된 이름을 aliases 에 추가한다(표현 다양성 보존).
-      const canonical = existingThings.find((t) => t.id === thingId)!;
-      if (ex.name !== canonical.name && !canonical.aliases.includes(ex.name)) {
-        const newAliases = [...canonical.aliases, ex.name];
-        await supabase.from("things").update({ aliases: newAliases }).eq("id", thingId);
-        canonical.aliases = newAliases;
-      }
-    } else {
-      if (match.type === "candidate") {
-        // 유사하지만 병합하지 않는다 — 잘못 합치면 복구 불가, 중복은 나중에 합칠 수 있다.
-        console.info(`[persistThings] 병합 후보(자동 병합 안 함): "${ex.name}" ↔ thing ${match.thingId}`);
-      }
-      const { data: newThing, error: insErr } = await supabase
-        .from("things")
-        .insert({ user_id: userId, kind: ex.kind, name: ex.name })
-        .select("id")
-        .single();
-      if (insErr) throw new Error(insErr.message);
-      thingId = (newThing as { id: string }).id;
-      existingThings.push({ id: thingId, kind: ex.kind, name: ex.name, aliases: [] });
-    }
-
-    const upsert = await supabase.from("thing_mentions").upsert(
-      { thing_id: thingId, raw_entry_id: entryId, user_id: userId, excerpt: ex.excerpt },
-      { onConflict: "thing_id,raw_entry_id" },
-    );
-    if (upsert.error) throw new Error(upsert.error.message);
-    await recountThing(supabase, thingId);
-    count++;
-  }
   return count;
 }

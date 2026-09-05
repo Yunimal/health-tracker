@@ -29,18 +29,31 @@ describe("재파싱 멱등성", () => {
   });
 });
 
-// ── note 있는 thing 보존 ──────────────────────────────────────────────────────
+// ── 사용자 손댄 흔적이 있는 thing 보존 ──────────────────────────────────────────
 
-describe("mention 0 + note 보존 규칙", () => {
-  it("note 없음 → 삭제 대상", () => {
+describe("mention 0 보존 규칙 — 사용자가 손댄 흔적이 있으면 삭제하지 않는다", () => {
+  it("note 없음 + aliases 없음 → 삭제 대상 (순수 파생 데이터)", () => {
     expect(shouldDeleteOrphanedThing(null)).toBe(true);
-    expect(shouldDeleteOrphanedThing("")).toBe(true);
-    expect(shouldDeleteOrphanedThing("   ")).toBe(true);
+    expect(shouldDeleteOrphanedThing({ note: null })).toBe(true);
+    expect(shouldDeleteOrphanedThing({ note: "", aliases: [] })).toBe(true);
+    expect(shouldDeleteOrphanedThing({ note: "   ", aliases: [] })).toBe(true);
   });
 
   it("note 있음 → 삭제하지 않음 (사용자 직접 작성 내용은 파생 데이터가 아니다)", () => {
-    expect(shouldDeleteOrphanedThing("이 병원 원장쌤이 잘 맞아")).toBe(false);
-    expect(shouldDeleteOrphanedThing("3회차에 개선됨")).toBe(false);
+    expect(shouldDeleteOrphanedThing({ note: "이 병원 원장쌤이 잘 맞아" })).toBe(false);
+    expect(shouldDeleteOrphanedThing({ note: "3회차에 개선됨", aliases: [] })).toBe(false);
+  });
+
+  it("aliases 있음 → 삭제하지 않음 (사용자가 병합하거나 이름을 수정한 것)", () => {
+    // renameThing: 이전 이름이 aliases 에 추가됨
+    expect(shouldDeleteOrphanedThing({ note: null, aliases: ["쥬베룩 필러"] })).toBe(false);
+    // mergeThings: loser 이름이 aliases 에 추가됨
+    expect(shouldDeleteOrphanedThing({ aliases: ["물광주사", "스킨부스터"] })).toBe(false);
+  });
+
+  it("note 없고 aliases 도 없으면 aliases 키 자체가 없어도 삭제 대상", () => {
+    expect(shouldDeleteOrphanedThing({ note: undefined })).toBe(true);
+    expect(shouldDeleteOrphanedThing({ note: null, aliases: undefined })).toBe(true);
   });
 });
 

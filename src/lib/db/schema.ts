@@ -223,6 +223,8 @@ export interface RawEntry {
   parsed_at: string | null;
   parse_error: string | null;
   hidden_at: string | null; // 소프트 삭제(숨김) 시각. null 이면 보임. (0004)
+  thing_extract_version: string | null; // 대상 추출 버전. null = 미추출. (0016)
+  thing_extract_error: string | null; // 대상 추출 실패 사유. 성공 시 null 로 초기화. (0017)
   created_at: string;
 }
 

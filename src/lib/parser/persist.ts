@@ -10,7 +10,8 @@ import type { RawEntry } from "@/lib/db/schema";
  *  - hypotheses 는 mention 기반 의미 병합(0008, 기능 [1]): 같은 의심이면 기존 canonical 행에
  *    mention 을 붙여 mention_count 를 올리고, 아니면 새 행을 만든다. 재파싱 시 이 원문의
  *    open mention 만 지웠다 다시 넣어 멱등하게 유지한다. (persistHypotheses 참고)
- *  - raw_entries 는 parse_version / parsed_at / parse_error 만 갱신. (0002 트리거 허용 컬럼)
+ *  - raw_entries 는 parse_version / parsed_at / parse_error 만 갱신. (0002/0004 트리거 허용 컬럼)
+ *    thing_extract_version 은 persistThings 성공 시 persistThings 내부에서 갱신된다. (0016)
  *
  * 실패는 던지지 않고 parse_error 에 기록하고 outcome 으로 돌려준다.
  * /api/parse(수동·배치)와 /api/entries(백그라운드 자동 트리거)가 공유한다.
@@ -38,24 +39,26 @@ export async function reparseEntry(
   opts: { cachePrompt?: boolean } = {},
 ): Promise<EntryOutcome> {
   try {
+    // 1. 파싱(LLM).
     const result = await parseTranscript(entry.transcript, entry.recorded_at, {
       cachePrompt: opts.cachePrompt ?? false,
     });
 
-    const delEvents = await supabase.from("events").delete().eq("raw_entry_id", entry.id);
-    if (delEvents.error) throw new Error(delEvents.error.message);
+    // 2. 기존 파생 데이터 ID 수집 — 삭제는 새 결과를 삽입한 뒤에 한다.
+    //    insert-before-delete: 삽입이 실패해도 기존 데이터가 보존된다.
+    const [oldEventsRes, oldUnparsedRes, oldReflectionsRes] = await Promise.all([
+      supabase.from("events").select("id").eq("raw_entry_id", entry.id),
+      supabase.from("unparsed_fragments").select("id").eq("raw_entry_id", entry.id),
+      supabase.from("reflections").select("id").eq("raw_entry_id", entry.id),
+    ]);
+    if (oldEventsRes.error) throw new Error(oldEventsRes.error.message);
+    if (oldUnparsedRes.error) throw new Error(oldUnparsedRes.error.message);
+    if (oldReflectionsRes.error) throw new Error(oldReflectionsRes.error.message);
+    const oldEventIds = ((oldEventsRes.data ?? []) as { id: string }[]).map((r) => r.id);
+    const oldUnparsedIds = ((oldUnparsedRes.data ?? []) as { id: string }[]).map((r) => r.id);
+    const oldReflectionIds = ((oldReflectionsRes.data ?? []) as { id: string }[]).map((r) => r.id);
 
-    const delUnparsed = await supabase
-      .from("unparsed_fragments")
-      .delete()
-      .eq("raw_entry_id", entry.id);
-    if (delUnparsed.error) throw new Error(delUnparsed.error.message);
-
-    // reflections 는 파생 데이터: 지웠다 다시 만든다. reflection_replies 는 건드리지 않는다
-    // (파생 아님 — 사용자가 읽은 응답이 재파싱으로 사라지면 안 된다). (0012)
-    const delReflections = await supabase.from("reflections").delete().eq("raw_entry_id", entry.id);
-    if (delReflections.error) throw new Error(delReflections.error.message);
-
+    // 3. 새 이벤트 삽입(기존 삭제 전).
     if (result.events.length > 0) {
       const rows = result.events.map((e) => ({
         raw_entry_id: entry.id,
@@ -71,9 +74,11 @@ export async function reparseEntry(
       if (ins.error) throw new Error(ins.error.message);
     }
 
-    // 가설: 의미 병합(mention 기반). incoming 이 0이어도 이 원문의 옛 mention 정리를 위해 호출.
+    // 4. 가설: 의미 병합(mention 기반). 내부도 insert-before-delete 순서를 따른다.
+    //    incoming 이 0이어도 이 원문의 옛 mention 정리를 위해 호출.
     await persistHypotheses(supabase, userId, entry.id, result.hypotheses);
 
+    // 5. 새 unparsed / reflections 삽입(기존 삭제 전).
     if (result.unparsed.length > 0) {
       const rows = result.unparsed.map((text) => ({
         raw_entry_id: entry.id,
@@ -84,6 +89,8 @@ export async function reparseEntry(
       if (ins.error) throw new Error(ins.error.message);
     }
 
+    // reflections 는 파생 데이터: 새로 만든 뒤 기존을 지운다. reflection_replies 는 건드리지 않는다
+    // (파생 아님 — 사용자가 읽은 응답이 재파싱으로 사라지면 안 된다). (0012)
     if (result.reflections.length > 0) {
       const rows = result.reflections.map((text) => ({
         raw_entry_id: entry.id,
@@ -94,18 +101,39 @@ export async function reparseEntry(
       if (ins.error) throw new Error(ins.error.message);
     }
 
+    // 6. 기존 파생 데이터 삭제 — 새 데이터 삽입 성공 후.
+    if (oldEventIds.length > 0) {
+      const del = await supabase.from("events").delete().in("id", oldEventIds);
+      if (del.error) throw new Error(del.error.message);
+    }
+    if (oldUnparsedIds.length > 0) {
+      const del = await supabase.from("unparsed_fragments").delete().in("id", oldUnparsedIds);
+      if (del.error) throw new Error(del.error.message);
+    }
+    if (oldReflectionIds.length > 0) {
+      const del = await supabase.from("reflections").delete().in("id", oldReflectionIds);
+      if (del.error) throw new Error(del.error.message);
+    }
+
+    // 7. parse_version 갱신.
     const upd = await supabase
       .from("raw_entries")
       .update({ parse_version: result.parse_version, parsed_at: kstNowIso(), parse_error: null })
       .eq("id", entry.id);
     if (upd.error) throw new Error(upd.error.message);
 
-    // 대상 추출(thing-extract). 파싱과 분리된 별도 단계. 실패해도 파싱 결과는 보존된다.
+    // 8. 대상 추출(thing-extract). 파싱과 분리된 별도 단계. 실패해도 파싱 결과는 보존된다.
     let thingsCount: number | undefined;
     try {
       thingsCount = await persistThings(supabase, userId, entry.id, entry.transcript);
     } catch (err) {
-      console.warn("[reparseEntry] thing 추출 실패 (파싱 결과 유지):", err);
+      const thingErrMsg = err instanceof Error ? err.message : String(err);
+      console.warn("[reparseEntry] thing 추출 실패 (파싱 결과 유지):", thingErrMsg);
+      // parse_error 와 같은 방식으로 thing_extract_error 에 기록한다. (0017)
+      await supabase
+        .from("raw_entries")
+        .update({ thing_extract_error: thingErrMsg })
+        .eq("id", entry.id);
     }
 
     return {
@@ -156,9 +184,14 @@ async function recountHypothesis(supabase: SupabaseClient, hypId: string): Promi
 
 /**
  * 가설 의미 병합. (기능 [1])
- * 1) 이 원문이 open 가설에 붙였던 mention 을 제거하고, 0이 된 open 가설은 삭제(멱등 재파싱).
- * 2) incoming 이 있으면 같은 user 의 open 가설 상위 30건과 의미 매칭(LLM, 별도 호출).
- * 3) 매칭되면 mention 을 붙여 카운트↑(같은 원문은 한 번만 — unique 제약), 아니면 새 canonical 생성.
+ *
+ * insert-before-delete 패턴: 새 mention 을 삽입한 뒤에 불필요해진 기존 mention 을 삭제한다.
+ * 삽입이 실패해도 기존 데이터가 보존된다.
+ *
+ * 1) 이 원문이 open 가설에 붙인 기존 mention ID 수집(아직 삭제 안 함).
+ * 2) incoming 이 있으면 매칭(LLM) 후 새 mention 삽입/upsert.
+ * 3) 이번 파싱에서 다루지 않은 기존 mention 삭제.
+ * 4) 영향받은 가설 전체 재계산.
  *
  * ⚠️ 동시성: 두 원문이 동시에 파싱되면 같은 의심을 각각 새로 만들 미세한 레이스가 있다.
  *    가족 3명 + 배치 순차 + 백그라운드 대개 1건씩이라 실사용 위험은 낮아 지금은 방치한다.
@@ -170,7 +203,7 @@ async function persistHypotheses(
   entryId: string,
   incoming: ParsedHypothesis[],
 ): Promise<void> {
-  // 1) 이 원문이 open 가설에 붙인 mention 제거 + 카운트 재계산.
+  // 1) 기존 open mention ID 수집. hypothesis_id → mention_id 맵. 아직 삭제하지 않는다.
   const { data: myMentions, error: mErr } = await supabase
     .from("hypothesis_mentions")
     .select("id, hypothesis_id, hypotheses!inner(status)")
@@ -178,19 +211,24 @@ async function persistHypotheses(
     .eq("hypotheses.status", "open");
   if (mErr) throw new Error(mErr.message);
 
-  const affected = new Set<string>();
-  const mentionIds: string[] = [];
+  // hypothesis_id → mention_id (이번 원문에서 이 가설에 붙은 기존 mention)
+  const oldHypMentionMap = new Map<string, string>();
   for (const row of (myMentions ?? []) as { id: string; hypothesis_id: string }[]) {
-    mentionIds.push(row.id);
-    affected.add(row.hypothesis_id);
+    oldHypMentionMap.set(row.hypothesis_id, row.id);
   }
-  if (mentionIds.length > 0) {
-    const del = await supabase.from("hypothesis_mentions").delete().in("id", mentionIds);
-    if (del.error) throw new Error(del.error.message);
-  }
-  for (const hypId of affected) await recountHypothesis(supabase, hypId);
+  const oldHypIds = new Set(oldHypMentionMap.keys());
 
-  if (incoming.length === 0) return;
+  // incoming 이 없으면: 기존 mention 정리 후 종료.
+  // (새 데이터가 없으므로 삭제 먼저도 데이터 소실 없음)
+  if (incoming.length === 0) {
+    const mentionIds = [...oldHypMentionMap.values()];
+    if (mentionIds.length > 0) {
+      const del = await supabase.from("hypothesis_mentions").delete().in("id", mentionIds);
+      if (del.error) throw new Error(del.error.message);
+    }
+    for (const hypId of oldHypIds) await recountHypothesis(supabase, hypId);
+    return;
+  }
 
   // 2) 매칭 후보: 같은 user 의 open 가설 상위 30건(많이 의심한 것 우선).
   const { data: existing, error: exErr } = await supabase
@@ -221,7 +259,9 @@ async function persistHypotheses(
     }
   }
 
-  // 4) 적용.
+  // 4) 새 mention 삽입/upsert — 기존 mention 삭제 전에.
+  //    같은 가설이 이번에도 매칭되면 upsert 가 기존 행을 업데이트한다(삭제 대상 제외).
+  const matchedHypIds = new Set<string>();
   for (let i = 0; i < incoming.length; i++) {
     const h = incoming[i]!;
     const matchedId = matchedIds[i] ?? null;
@@ -232,7 +272,7 @@ async function persistHypotheses(
         { onConflict: "hypothesis_id,raw_entry_id" },
       );
       if (up.error) throw new Error(up.error.message);
-      await recountHypothesis(supabase, matchedId);
+      matchedHypIds.add(matchedId);
     } else {
       const insHyp = await supabase
         .from("hypotheses")
@@ -256,6 +296,22 @@ async function persistHypotheses(
         statement: h.statement,
       });
       if (insM.error) throw new Error(insM.error.message);
+      matchedHypIds.add(newId);
     }
   }
+
+  // 5) 이번 파싱에서 매칭되지 않은 기존 mention 삭제.
+  //    upsert 된 가설(matchedHypIds)의 mention 은 업데이트됐으므로 삭제하지 않는다.
+  const mentionIdsToDelete: string[] = [];
+  for (const [hypId, mentionId] of oldHypMentionMap) {
+    if (!matchedHypIds.has(hypId)) mentionIdsToDelete.push(mentionId);
+  }
+  if (mentionIdsToDelete.length > 0) {
+    const del = await supabase.from("hypothesis_mentions").delete().in("id", mentionIdsToDelete);
+    if (del.error) throw new Error(del.error.message);
+  }
+
+  // 6) 재계산 — 기존 + 새로 생성된 가설 전체. 삭제 후에 해야 count 가 정확하다.
+  const allAffected = new Set([...oldHypIds, ...matchedHypIds]);
+  for (const hypId of allAffected) await recountHypothesis(supabase, hypId);
 }

@@ -9,14 +9,16 @@
 
 1. **`raw_entries.transcript` 는 절대 UPDATE/DELETE 하지 않는다.** 원문은 불변이며
    영구 보존한다. 파싱이 틀렸어도 원문은 그대로 두고 파생 데이터만 다시 만든다.
-   - `raw_entries_prevent_mutation()` 함수는 0002 에서 정의되고 0004 에서 create or replace 로
+   - `raw_entries_prevent_mutation()` 함수는 0002 에서 정의되고 0017 에서 create or replace 로
      교체됐다. 현재 허용 컬럼 목록을 확인하려면 가장 최근 마이그레이션을 봐야 한다. 앞으로
      이 함수를 또 바꾸면 이 줄의 파일 번호도 갱신할 것.
 2. **파싱 결과(`events`, `hypotheses`)는 언제든 삭제하고 재생성 가능한 파생 데이터다.**
    재파싱은 기존 파생 데이터를 지우고 다시 INSERT 하는 방식으로 한다.
-   - ⚠️ **`reparseEntry` 는 기존 events 를 삭제한 뒤 재삽입한다(비원자적, 트랜잭션 없음).
-     삽입이 실패하면 이전 파싱 결과가 사라진 채 남는다(원문은 보존).** 마이그레이션을 먼저
-     적용하지 않고 재파싱하면 이 상황이 발생한다(예: 새 카테고리 CHECK 미적용 → INSERT 실패).
+   - **파생 데이터를 재생성할 때는 새 결과를 얻은 뒤에 기존 것을 지운다(insert-before-delete).**
+     지우고 나서 만들다가 실패하면 데이터가 사라진다. 이 패턴을 세 번 겪었다
+     (reparseEntry events 2회, persistThings mentions 1회). `reparseEntry`, `persistHypotheses`,
+     `persistThings` 는 모두 이 순서를 따른다.
+   - 트랜잭션 없음 — 중간 실패 시 구 데이터와 신 데이터가 공존할 수 있으나 재파싱으로 복구된다.
      **버전을 올릴 때는 마이그레이션 → 재파싱 순서를 지킨다.** (docs/multi-user-setup.md)
 3. **LLM 이 수치를 추론해서 지어내지 않는다. 모르면 `null`.** "세 모금"을 90ml 로
    확정하지 말고 `amount_text` 에 원문을 남기고 `amount_value` 는 `null` 로 둔다.
@@ -122,4 +124,15 @@ pnpm typecheck      # tsc --noEmit
 pnpm lint           # next lint
 pnpm test           # 전체 테스트
 pnpm test:golden    # 골든 회귀 테스트 (프롬프트 수정 시 필수)
+pnpm reparse        # 파싱 재실행 (parse_version 불일치 원문 대상)
+pnpm extract-things # 대상 추출 재실행 (thing_extract_version 불일치 원문 대상)
+pnpm sync-things    # 이벤트 집계 기반 things 동기화 (LLM 없음)
 ```
+
+### 버전 올릴 때 순서
+
+- **파싱 프롬프트** 수정 → `PARSE_VERSION` 올리기(`src/lib/parser/index.ts`) →
+  `pnpm test:golden` → `pnpm reparse`
+- **대상 추출 프롬프트** 수정 → `THING_EXTRACT_VERSION` 올리기(`src/lib/parser/thing-extract.ts`) →
+  `pnpm extract-things` ← **파싱은 다시 하지 않는다. 둘은 별개다.**
+- 마이그레이션을 먼저 적용한 뒤 재실행한다. (CLAUDE.md 원칙 2)
