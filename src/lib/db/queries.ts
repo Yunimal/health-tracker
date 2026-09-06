@@ -298,27 +298,25 @@ export async function getThingRejectionPairs(userId: string): Promise<Set<string
   return set;
 }
 
-/** thing 상세 페이지에서 한 언급 카드에 담을 데이터. */
+/** thing 상세 페이지의 언급 이력 한 줄. 접힌 아코디언에서 날짜 + excerpt 한 줄만 보여준다. */
 export interface ThingDetailMention {
   id: string;
   raw_entry_id: string;
   excerpt: string | null;
   recorded_at: string; // raw_entries.recorded_at (KST 날짜 계산 기준)
-  transcript: string;  // raw_entries.transcript (불변 원문)
-  kst_date: string;    // YYYY-MM-DD KST (/?date= 링크에 쓴다)
-  events: TimelineEvent[]; // 이 원문에서 나온 이벤트 중 thing 이름과 일치하는 것
+  kst_date: string;    // YYYY-MM-DD KST (/?date= 원문 링크에 쓴다)
 }
 
 export interface ThingDetail {
   thing: Thing;
-  mentions: ThingDetailMention[];    // created_at 최신순
-  relatedEvents: (TimelineEvent & { raw_entry_id: string })[]; // occurred_at 최신순
+  mentions: ThingDetailMention[];  // created_at 최신순
   relatedHypotheses: Hypothesis[];
 }
 
 /**
- * thing 1건 + 상세 화면에 필요한 모든 데이터.
- * LLM 요약 없음 — 원문을 그대로 보여준다. 서버 전용(service role).
+ * thing 1건 + 상세 화면에 필요한 최소 데이터.
+ * 이벤트 집계·비교는 compareThingOutcomes (lib/analysis/thing-compare.ts) 가 담당한다.
+ * 서버 전용(service role).
  */
 export async function getThingDetail(
   userId: string,
@@ -336,95 +334,56 @@ export async function getThingDetail(
   if (!thingRow) return null;
   const thing = thingRow as Thing;
 
-  // 언급 이력 + 원문 join (최신순)
+  // 언급 이력 + 원문 recorded_at (최신순)
   const { data: mentionRows, error: mErr } = await supabase
     .from("thing_mentions")
-    .select("id, excerpt, created_at, raw_entry_id, raw_entries(transcript, recorded_at)")
+    .select("id, excerpt, created_at, raw_entry_id, raw_entries(recorded_at)")
     .eq("thing_id", thingId)
     .eq("user_id", userId)
     .order("created_at", { ascending: false });
   if (mErr) throw new Error(mErr.message);
 
-  const rawEntryIds = ((mentionRows ?? []) as { raw_entry_id: string }[]).map(
-    (m) => m.raw_entry_id,
-  );
-
-  // 언급된 원문의 이벤트 + 전체 사용자 이벤트를 병렬로 가져온다
-  const [entryEvRes, allEvRes, hypRes] = await Promise.all([
-    rawEntryIds.length > 0
-      ? supabase
-          .from("events")
-          .select("id, category, occurred_at, occurred_at_precision, payload, confidence, needs_review, corrected_by_user, raw_entry_id")
-          .eq("user_id", userId)
-          .in("raw_entry_id", rawEntryIds)
-          .order("occurred_at")
-      : Promise.resolve({ data: [], error: null }),
-    supabase
-      .from("events")
-      .select("id, category, occurred_at, occurred_at_precision, payload, confidence, needs_review, corrected_by_user, raw_entry_id")
-      .eq("user_id", userId)
-      .order("occurred_at", { ascending: false }),
-    supabase.from("hypotheses").select("*").eq("user_id", userId),
-  ]);
-  if (entryEvRes.error) throw new Error(entryEvRes.error.message);
-  if (allEvRes.error) throw new Error(allEvRes.error.message);
-  if (hypRes.error) throw new Error(hypRes.error.message);
-
-  // thing 이름·aliases 의 정규화 집합
-  const allNames = [thing.name, ...thing.aliases];
-  const normSet = new Set(allNames.map(normalize));
-
-  // 원문별 이벤트 맵 (언급 이력 카드용)
-  type EvRow = TimelineEvent & { raw_entry_id: string };
-  const entryEvRows = (entryEvRes.data ?? []) as EvRow[];
-  const evByEntry = groupBy(entryEvRows, (e) => e.raw_entry_id);
+  // 관련 가설 (병렬)
+  const { data: hypData, error: hypErr } = await supabase
+    .from("hypotheses")
+    .select("*")
+    .eq("user_id", userId);
+  if (hypErr) throw new Error(hypErr.message);
 
   type MentionRow = {
     id: string;
     excerpt: string | null;
     created_at: string;
     raw_entry_id: string;
-    raw_entries: { transcript: string; recorded_at: string } | { transcript: string; recorded_at: string }[] | null;
+    raw_entries: { recorded_at: string } | { recorded_at: string }[] | null;
   };
 
   const mentions: ThingDetailMention[] = ((mentionRows ?? []) as MentionRow[]).map((m) => {
     const re = Array.isArray(m.raw_entries) ? m.raw_entries[0] : m.raw_entries;
     const recordedAt = re?.recorded_at ?? "";
-    const kstDate = recordedAt ? kstDayKey(recordedAt) : "";
-    // 이 원문의 이벤트 중 thing 이름과 일치하는 것만 카드에 표시
-    const matchedEvs = (evByEntry.get(m.raw_entry_id) ?? []).filter((e) => {
-      const n = eventName(e.category, e.payload);
-      return n != null && normSet.has(normalize(n));
-    });
     return {
       id: m.id,
       raw_entry_id: m.raw_entry_id,
       excerpt: m.excerpt,
       recorded_at: recordedAt,
-      transcript: re?.transcript ?? "",
-      kst_date: kstDate,
-      events: matchedEvs,
+      kst_date: recordedAt ? kstDayKey(recordedAt) : "",
     };
   });
 
-  // 관련 이벤트 — thing 이름·aliases 와 이름이 일치하는 이벤트 전체 (최신순)
-  const allEvRows = (allEvRes.data ?? []) as EvRow[];
-  const relatedEvents = allEvRows.filter((e) => {
-    const n = eventName(e.category, e.payload);
-    return n != null && normSet.has(normalize(n));
-  });
-
-  // 관련 가설 — cause_hint 또는 effect_hint 에 이름이 포함된 가설
-  const hypotheses = (hypRes.data ?? []) as Hypothesis[];
+  // 관련 가설 — cause_hint 또는 effect_hint 에 thing 이름이 포함된 것
+  const allNames = [thing.name, ...thing.aliases];
   const normNamesArr = allNames.map((n) => n.toLowerCase().replace(/\s+/g, ""));
+  const hypotheses = (hypData ?? []) as Hypothesis[];
   const relatedHypotheses = hypotheses.filter((h) => {
     const hints = [h.cause_hint, h.effect_hint]
       .filter((s): s is string => typeof s === "string" && s.length > 0)
       .map((s) => s.toLowerCase().replace(/\s+/g, ""));
-    return hints.some((hint) => normNamesArr.some((name) => name.length >= 2 && hint.includes(name)));
+    return hints.some((hint) =>
+      normNamesArr.some((name) => name.length >= 2 && hint.includes(name)),
+    );
   });
 
-  return { thing, mentions, relatedEvents, relatedHypotheses };
+  return { thing, mentions, relatedHypotheses };
 }
 
 // ── 대시보드 ─────────────────────────────────────────────────────────────────
