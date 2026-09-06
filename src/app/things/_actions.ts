@@ -179,6 +179,27 @@ export async function renameThing(id: string, newName: string): Promise<ActionRe
 }
 
 /**
+ * thing 의 메모(note)를 저장한다. 빈 문자열이면 null 로 저장(메모 삭제).
+ */
+export async function updateThingNote(id: string, note: string): Promise<ActionResult> {
+  const supabase = getSupabaseClient();
+  const user = await currentWebUser();
+  if (!user) return { ok: false, error: "로그인이 필요합니다" };
+
+  const trimmed = note.trim() || null;
+  const { error } = await supabase
+    .from("things")
+    .update({ note: trimmed })
+    .eq("id", id)
+    .eq("user_id", user.id);
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath(`/things/${id}`);
+  revalidatePath("/things");
+  return { ok: true };
+}
+
+/**
  * 병합 후보 쌍을 "다름"으로 거부한다. 같은 쌍을 다시 후보로 제안하지 않는다.
  * 쌍은 canonical order(작은 uuid 먼저)로 저장한다.
  */

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useTransition, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { mergeThings, rejectThingMerge, deleteThing, renameThing } from "../_actions";
@@ -304,7 +305,12 @@ export default function ThingsClient({
                         />
                       ) : (
                         <>
-                          <span className="font-medium">{t.name}</span>
+                          <Link
+                            href={`/things/${t.id}`}
+                            className="font-medium hover:underline"
+                          >
+                            {t.name}
+                          </Link>
                           <button
                             onClick={() => startEdit(t)}
                             disabled={pending}
